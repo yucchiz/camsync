@@ -446,13 +446,52 @@ html, body {
   opacity: 0.3;
 }
 
+.history-swipe-container {
+  position: relative;
+  margin-bottom: 12px;
+  overflow: hidden;
+  border-radius: var(--radius);
+}
+
+.history-swipe-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-red, #ef4444);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+
+.history-swipe-actions svg {
+  width: 20px;
+  height: 20px;
+  margin-bottom: 2px;
+}
+
+.history-swipe-actions span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
 .history-item {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 16px;
-  margin-bottom: 12px;
   position: relative;
+  transition: transform 0.3s ease;
+  z-index: 1;
+  touch-action: pan-y;
 }
 
 .history-item-header {
@@ -489,26 +528,16 @@ html, body {
   font-weight: 500;
 }
 
-.history-delete {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 28px;
-  height: 28px;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
+.history-item.swiped {
+  transform: translateX(-80px);
 }
 
-.history-delete:hover {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--accent-red);
+.history-swipe-hint {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 4px 0 8px;
+  opacity: 0.6;
 }
 
 .clear-all-btn {
@@ -975,26 +1004,31 @@ async function renderHistory() {
   }
 
   // List
-  let html = '';
+  let html = '<div class="history-swipe-hint">← スワイプで削除</div>';
   records.forEach((r) => {
     const d = new Date(r.timestamp);
     const dateStr = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 
     html += `
-      <div class="history-item">
-        <button class="history-delete" onclick="deleteItem(${r.id})" aria-label="削除">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-        <div class="history-item-header">
-          <div class="history-date">${dateStr}</div>
-          <div class="history-diff ${r.direction}">${r.displayVal}</div>
+      <div class="history-swipe-container" data-id="${r.id}">
+        <div class="history-swipe-actions" onclick="deleteItem(${r.id})">
+          <span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            削除
+          </span>
         </div>
-        <div class="history-meta">
-          ${r.location ? `<strong>設置場所:</strong> ${escHtml(r.location)}<br>` : ''}
-          ${r.viewDate ? `<strong>閲覧日:</strong> ${r.viewDate}<br>` : ''}
-          ${r.witnessName ? `<strong>立会人:</strong> ${escHtml(r.witnessName)}${r.witnessAge ? ` (${r.witnessAge}歳)` : ''}<br>` : ''}
-          <strong>基準:</strong> ${r.refTime}　<strong>カメラ:</strong> ${r.camTime}
-          ${r.notes ? `<br><strong>補足:</strong> ${escHtml(r.notes)}` : ''}
+        <div class="history-item">
+          <div class="history-item-header">
+            <div class="history-date">${dateStr}</div>
+            <div class="history-diff ${r.direction}">${r.displayVal}</div>
+          </div>
+          <div class="history-meta">
+            ${r.location ? `<strong>設置場所:</strong> ${escHtml(r.location)}<br>` : ''}
+            ${r.viewDate ? `<strong>閲覧日:</strong> ${r.viewDate}<br>` : ''}
+            ${r.witnessName ? `<strong>立会人:</strong> ${escHtml(r.witnessName)}${r.witnessAge ? ` (${r.witnessAge}歳)` : ''}<br>` : ''}
+            <strong>基準:</strong> ${r.refTime}　<strong>カメラ:</strong> ${r.camTime}
+            ${r.notes ? `<br><strong>補足:</strong> ${escHtml(r.notes)}` : ''}
+          </div>
         </div>
       </div>
     `;
@@ -1002,6 +1036,7 @@ async function renderHistory() {
 
   html += `<button class="clear-all-btn" onclick="clearAll()">すべての履歴を削除</button>`;
   listEl.innerHTML = html;
+  initSwipeHandlers();
 }
 
 function escHtml(str) {
@@ -1011,10 +1046,90 @@ function escHtml(str) {
 }
 
 async function deleteItem(id) {
-  if (!confirm('この記録を削除しますか？')) return;
   await deleteRecord(id);
-  renderHistory();
+  const container = document.querySelector(`.history-swipe-container[data-id="${id}"]`);
+  if (container) {
+    container.style.transition = 'opacity 0.3s ease, max-height 0.3s ease';
+    container.style.opacity = '0';
+    container.style.maxHeight = container.offsetHeight + 'px';
+    requestAnimationFrame(() => { container.style.maxHeight = '0'; container.style.marginBottom = '0'; });
+    setTimeout(() => renderHistory(), 300);
+  } else {
+    renderHistory();
+  }
   showToast('記録を削除しました');
+}
+
+function initSwipeHandlers() {
+  const containers = document.querySelectorAll('.history-swipe-container');
+  containers.forEach(container => {
+    const item = container.querySelector('.history-item');
+    let startX = 0, currentX = 0, isSwiping = false;
+
+    item.addEventListener('touchstart', (e) => {
+      // Close any other open swipes
+      document.querySelectorAll('.history-item.swiped').forEach(el => {
+        if (el !== item) el.classList.remove('swiped');
+      });
+      startX = e.touches[0].clientX;
+      currentX = startX;
+      isSwiping = false;
+      item.style.transition = 'none';
+    }, { passive: true });
+
+    item.addEventListener('touchmove', (e) => {
+      currentX = e.touches[0].clientX;
+      const diffX = currentX - startX;
+
+      // Only activate horizontal swipe if movement is mostly horizontal
+      if (!isSwiping && Math.abs(diffX) > 10) {
+        isSwiping = true;
+      }
+
+      if (isSwiping) {
+        // Allow swipe left only (negative), clamp between -80 and 0
+        const wasSwiped = item.classList.contains('swiped');
+        const base = wasSwiped ? -80 : 0;
+        const tx = Math.max(-80, Math.min(0, base + diffX));
+        item.style.transform = `translateX(${tx}px)`;
+      }
+    }, { passive: true });
+
+    item.addEventListener('touchend', () => {
+      item.style.transition = 'transform 0.3s ease';
+      const diffX = currentX - startX;
+      const wasSwiped = item.classList.contains('swiped');
+
+      if (wasSwiped) {
+        // If already open and swiped right, close it
+        if (diffX > 30) {
+          item.classList.remove('swiped');
+          item.style.transform = '';
+        } else {
+          item.style.transform = 'translateX(-80px)';
+        }
+      } else {
+        // If swiped left enough, open it
+        if (diffX < -40) {
+          item.classList.add('swiped');
+          item.style.transform = 'translateX(-80px)';
+        } else {
+          item.style.transform = '';
+        }
+      }
+    }, { passive: true });
+  });
+
+  // Tap outside to close open swipes
+  document.getElementById('historyList').addEventListener('click', (e) => {
+    if (!e.target.closest('.history-swipe-container')) {
+      document.querySelectorAll('.history-item.swiped').forEach(el => {
+        el.classList.remove('swiped');
+        el.style.transition = 'transform 0.3s ease';
+        el.style.transform = '';
+      });
+    }
+  });
 }
 
 async function clearAll() {
