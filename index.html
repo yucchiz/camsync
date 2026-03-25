@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0e17">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>CamSync</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg-primary: #0a0e17;
+  --bg-secondary: #111827;
+  --bg-card: #151d2e;
+  --bg-input: #1a2332;
+  --border: #1e293b;
+  --border-focus: #3b82f6;
+  --text-primary: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #475569;
+  --accent-blue: #3b82f6;
+  --accent-cyan: #06b6d4;
+  --accent-amber: #f59e0b;
+  --accent-red: #ef4444;
+  --accent-green: #22c55e;
+  --radius: 14px;
+  --safe-top: env(safe-area-inset-top, 20px);
+  --safe-bottom: env(safe-area-inset-bottom, 20px);
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Noto Sans JP', sans-serif;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* ===== Layout ===== */
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.app-header {
+  padding: calc(var(--safe-top) + 8px) 20px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.app-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  color: var(--text-primary);
+}
+
+.app-title span {
+  color: var(--accent-cyan);
+}
+
+.app-body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(70px + var(--safe-bottom));
+}
+
+.app-body::-webkit-scrollbar { display: none; }
+
+/* ===== Tab Bar ===== */
+.tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  background: rgba(17, 24, 39, 0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--border);
+  padding: 8px 0 calc(8px + var(--safe-bottom));
+  z-index: 100;
+}
+
+.tab-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 10px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.tab-item.active { color: var(--accent-cyan); }
+
+.tab-item svg { width: 22px; height: 22px; }
+
+/* ===== Screens ===== */
+.screen { display: none; padding: 0 20px 20px; }
+.screen.active { display: block; }
+
+/* ===== Live Clock ===== */
+.clock-section {
+  text-align: center;
+  padding: 24px 0 16px;
+}
+
+.clock-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.live-clock {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 52px;
+  font-weight: 300;
+  letter-spacing: 3px;
+  color: var(--text-primary);
+  line-height: 1;
+  transition: color 0.3s;
+}
+
+.live-clock.locked {
+  color: var(--accent-cyan);
+}
+
+.clock-date {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 6px;
+}
+
+.clock-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--accent-green);
+  margin-top: 10px;
+}
+
+.clock-status::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--accent-green);
+  border-radius: 50%;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* ===== Lock Button ===== */
+.lock-btn {
+  display: block;
+  width: 100%;
+  padding: 16px;
+  margin: 8px 0 20px;
+  border: 2px solid var(--accent-cyan);
+  border-radius: var(--radius);
+  background: rgba(6, 182, 212, 0.08);
+  color: var(--accent-cyan);
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 1px;
+}
+
+.lock-btn:active {
+  transform: scale(0.97);
+  background: rgba(6, 182, 212, 0.15);
+}
+
+.lock-btn.locked {
+  border-color: var(--text-muted);
+  background: rgba(71, 85, 105, 0.1);
+  color: var(--text-secondary);
+}
+
+/* ===== Locked Time Display ===== */
+.locked-time-display {
+  display: none;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.locked-time-display.visible { display: block; }
+
+.locked-time-display .label {
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.locked-time-display .time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 28px;
+  font-weight: 500;
+  color: var(--accent-cyan);
+}
+
+.reset-link {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 8px;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* ===== Card / Section ===== */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.card-title {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+  text-transform: uppercase;
+}
+
+/* ===== Input Fields ===== */
+.field {
+  margin-bottom: 14px;
+}
+
+.field:last-child { margin-bottom: 0; }
+
+.field label {
+  display: block;
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.field input,
+.field textarea,
+.field select {
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
+}
+
+.field input:focus,
+.field textarea:focus {
+  border-color: var(--border-focus);
+}
+
+.field input[type="date"],
+.field select {
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 14px;
+}
+
+.field textarea {
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 14px;
+  resize: vertical;
+  min-height: 60px;
+}
+
+.time-input-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.time-input-group input {
+  width: 70px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 500;
+  padding: 10px 4px;
+}
+
+.time-input-group .sep {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 22px;
+  color: var(--text-muted);
+}
+
+/* ===== Calculate Button ===== */
+.calc-btn {
+  display: block;
+  width: 100%;
+  padding: 16px;
+  margin: 20px 0;
+  border: none;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+  color: #fff;
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 1px;
+}
+
+.calc-btn:active {
+  transform: scale(0.97);
+  opacity: 0.9;
+}
+
+.calc-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* ===== Result Display ===== */
+.result-panel {
+  display: none;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.result-panel.visible { display: block; }
+
+.result-direction {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  margin-bottom: 6px;
+}
+
+.result-direction.ahead { color: var(--accent-blue); }
+.result-direction.behind { color: var(--accent-amber); }
+.result-direction.exact { color: var(--accent-green); }
+
+.result-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 48px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.result-value.ahead { color: var(--accent-blue); }
+.result-value.behind { color: var(--accent-amber); }
+.result-value.exact { color: var(--accent-green); }
+
+.result-unit {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.result-detail {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  line-height: 1.8;
+}
+
+.save-btn {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  margin-top: 16px;
+  border: 1px solid var(--accent-green);
+  border-radius: var(--radius);
+  background: rgba(34, 197, 94, 0.08);
+  color: var(--accent-green);
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.save-btn:active {
+  transform: scale(0.97);
+  background: rgba(34, 197, 94, 0.15);
+}
+
+/* ===== History ===== */
+.history-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+}
+
+.history-empty svg {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 16px;
+  opacity: 0.3;
+}
+
+.history-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+  position: relative;
+}
+
+.history-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.history-date {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.history-diff {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.history-diff.ahead { color: var(--accent-blue); }
+.history-diff.behind { color: var(--accent-amber); }
+.history-diff.exact { color: var(--accent-green); }
+
+.history-meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.8;
+}
+
+.history-meta strong {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.history-delete {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.history-delete:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--accent-red);
+}
+
+.clear-all-btn {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  margin-top: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-muted);
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* ===== Notice ===== */
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 10px;
+  background: rgba(245, 158, 11, 0.06);
+  border: 1px solid rgba(245, 158, 11, 0.15);
+  margin-bottom: 16px;
+}
+
+.notice svg { flex-shrink: 0; width: 18px; height: 18px; color: var(--accent-amber); margin-top: 1px; }
+
+.notice p { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+
+/* ===== Toast ===== */
+.toast {
+  position: fixed;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  padding: 12px 24px;
+  background: rgba(34, 197, 94, 0.9);
+  color: #fff;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s ease;
+  z-index: 200;
+  backdrop-filter: blur(10px);
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ===== Animations ===== */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.screen.active { animation: fadeIn 0.3s ease; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="app-header">
+    <div class="app-title">Cam<span>Sync</span></div>
+    <div style="font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">v1.0</div>
+  </header>
+
+  <div class="app-body">
+    <!-- ===== Calculator Screen ===== -->
+    <div id="screen-calc" class="screen active">
+
+      <!-- Live Clock -->
+      <div class="clock-section">
+        <div class="clock-label">基準時刻（端末 NTP 同期）</div>
+        <div id="liveClock" class="live-clock">00:00:00</div>
+        <div id="liveDate" class="clock-date"></div>
+        <div class="clock-status">NTP 同期済み</div>
+      </div>
+
+      <!-- Lock Button -->
+      <button id="lockBtn" class="lock-btn" onclick="toggleLock()">
+        ▼ タップして基準時刻を固定
+      </button>
+
+      <!-- Locked Display -->
+      <div id="lockedDisplay" class="locked-time-display">
+        <div class="label">固定された基準時刻</div>
+        <div id="lockedTime" class="time">--:--:--</div>
+        <div class="reset-link" onclick="resetLock()">リセット</div>
+      </div>
+
+      <!-- Notice -->
+      <div class="notice">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <p>「設定 ＞ 一般 ＞ 日付と時刻」で「自動設定」がオンになっていることを確認してください。</p>
+      </div>
+
+      <!-- Camera Time Input -->
+      <div class="card">
+        <div class="card-title">カメラ表示時刻</div>
+        <div class="field">
+          <label>防犯カメラに表示されている時刻</label>
+          <div class="time-input-group">
+            <input type="number" id="camH" min="0" max="23" placeholder="HH" inputmode="numeric" maxlength="2">
+            <span class="sep">:</span>
+            <input type="number" id="camM" min="0" max="59" placeholder="MM" inputmode="numeric" maxlength="2">
+            <span class="sep">:</span>
+            <input type="number" id="camS" min="0" max="59" placeholder="SS" inputmode="numeric" maxlength="2">
+          </div>
+        </div>
+      </div>
+
+      <!-- Calculate -->
+      <button class="calc-btn" onclick="calculate()">誤差を計算</button>
+
+      <!-- Result -->
+      <div id="resultPanel" class="result-panel">
+        <div id="resultDir" class="result-direction"></div>
+        <div id="resultVal" class="result-value"></div>
+        <div id="resultUnit" class="result-unit"></div>
+        <div id="resultDetail" class="result-detail"></div>
+
+        <!-- Detail Fields (shown after calculation) -->
+        <div style="margin-top:20px;text-align:left;">
+          <div class="card-title">記録情報（任意）</div>
+          <div class="field">
+            <label>防犯カメラ設置場所</label>
+            <input type="text" id="camLocation" placeholder="例：正面玄関 東側">
+          </div>
+          <div class="field">
+            <label>閲覧日</label>
+            <input type="date" id="viewDate">
+          </div>
+          <div class="field">
+            <label>立会人 氏名</label>
+            <input type="text" id="witnessName" placeholder="例：山田 太郎" style="font-family:'Noto Sans JP',sans-serif;font-size:14px;">
+          </div>
+          <div class="field">
+            <label>立会人 年齢</label>
+            <input type="number" id="witnessAge" placeholder="例：45" inputmode="numeric" min="0" max="120">
+          </div>
+          <div class="field">
+            <label>補足情報</label>
+            <textarea id="notes" placeholder="カメラ型番、確認状況等"></textarea>
+          </div>
+        </div>
+
+        <button class="save-btn" onclick="saveRecord()">この記録を保存</button>
+      </div>
+    </div>
+
+    <!-- ===== History Screen ===== -->
+    <div id="screen-history" class="screen">
+      <div id="historyList"></div>
+    </div>
+
+    <!-- ===== Info Screen ===== -->
+    <div id="screen-info" class="screen">
+      <div class="card">
+        <div class="card-title">CamSync について</div>
+        <p style="font-size:13px;color:var(--text-secondary);line-height:1.8;">
+          防犯カメラの表示時刻と、端末のNTP同期時刻との誤差を計算・記録するツールです。完全オフラインで動作し、データは端末内のみに保存されます。
+        </p>
+      </div>
+      <div class="card">
+        <div class="card-title">使い方</div>
+        <p style="font-size:13px;color:var(--text-secondary);line-height:1.8;">
+          ① アプリを開き、リアルタイム時計を確認<br>
+          ② 防犯カメラの映像と時計を比較し、タップして基準時刻を固定<br>
+          ③ カメラ表示時刻を入力<br>
+          ④ 「誤差を計算」をタップ<br>
+          ⑤ 必要に応じて記録情報を入力し保存
+        </p>
+      </div>
+      <div class="card">
+        <div class="card-title">注意事項</div>
+        <p style="font-size:13px;color:var(--text-secondary);line-height:1.8;">
+          端末の「日付と時刻」が「自動設定」になっている場合、NTPサーバーと同期された高精度な時刻が使用されます。手動設定の場合は精度が保証されません。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab Bar -->
+  <nav class="tab-bar">
+    <button class="tab-item active" onclick="switchTab('calc', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span>計算</span>
+    </button>
+    <button class="tab-item" onclick="switchTab('history', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      <span>履歴</span>
+    </button>
+    <button class="tab-item" onclick="switchTab('info', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      <span>情報</span>
+    </button>
+  </nav>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+// ===== State =====
+let isLocked = false;
+let lockedRefTime = null;
+let lastCalcResult = null;
+let clockInterval = null;
+
+// ===== IndexedDB =====
+const DB_NAME = 'CamSyncDB';
+const DB_VERSION = 1;
+const STORE_NAME = 'records';
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        const store = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+        store.createIndex('timestamp', 'timestamp', { unique: false });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function addRecord(record) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).add(record);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function getAllRecords() {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const req = tx.objectStore(STORE_NAME).getAll();
+    req.onsuccess = () => resolve(req.result.sort((a, b) => b.timestamp - a.timestamp));
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function deleteRecord(id) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function clearAllRecords() {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).clear();
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+// ===== Live Clock =====
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2, '0');
+  const m = String(now.getMinutes()).padStart(2, '0');
+  const s = String(now.getSeconds()).padStart(2, '0');
+  const el = document.getElementById('liveClock');
+  if (!isLocked) {
+    el.textContent = `${h}:${m}:${s}`;
+  }
+  const dateEl = document.getElementById('liveDate');
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+  dateEl.textContent = `${year}/${month}/${day} (${weekdays[now.getDay()]})`;
+}
+
+function startClock() {
+  updateClock();
+  clockInterval = setInterval(updateClock, 200);
+}
+
+// ===== Lock / Unlock =====
+function toggleLock() {
+  if (isLocked) return;
+  const now = new Date();
+  lockedRefTime = {
+    h: now.getHours(),
+    m: now.getMinutes(),
+    s: now.getSeconds(),
+    date: now
+  };
+  isLocked = true;
+
+  const h = String(lockedRefTime.h).padStart(2, '0');
+  const m = String(lockedRefTime.m).padStart(2, '0');
+  const s = String(lockedRefTime.s).padStart(2, '0');
+
+  document.getElementById('liveClock').classList.add('locked');
+  document.getElementById('liveClock').textContent = `${h}:${m}:${s}`;
+  document.getElementById('lockBtn').textContent = '● 基準時刻を固定しました';
+  document.getElementById('lockBtn').classList.add('locked');
+  document.getElementById('lockedDisplay').classList.add('visible');
+  document.getElementById('lockedTime').textContent = `${h}:${m}:${s}`;
+
+  // Set viewDate to today
+  const today = now.toISOString().split('T')[0];
+  document.getElementById('viewDate').value = today;
+}
+
+function resetLock() {
+  isLocked = false;
+  lockedRefTime = null;
+  document.getElementById('liveClock').classList.remove('locked');
+  document.getElementById('lockBtn').textContent = '▼ タップして基準時刻を固定';
+  document.getElementById('lockBtn').classList.remove('locked');
+  document.getElementById('lockedDisplay').classList.remove('visible');
+  document.getElementById('resultPanel').classList.remove('visible');
+  lastCalcResult = null;
+}
+
+// ===== Calculation =====
+function calculate() {
+  if (!lockedRefTime) {
+    showToast('先に基準時刻を固定してください', true);
+    return;
+  }
+
+  const camH = parseInt(document.getElementById('camH').value);
+  const camM = parseInt(document.getElementById('camM').value);
+  const camS = parseInt(document.getElementById('camS').value);
+
+  if (isNaN(camH) || isNaN(camM) || isNaN(camS)) {
+    showToast('カメラ時刻を入力してください', true);
+    return;
+  }
+
+  if (camH < 0 || camH > 23 || camM < 0 || camM > 59 || camS < 0 || camS > 59) {
+    showToast('有効な時刻を入力してください', true);
+    return;
+  }
+
+  const refTotalSec = lockedRefTime.h * 3600 + lockedRefTime.m * 60 + lockedRefTime.s;
+  const camTotalSec = camH * 3600 + camM * 60 + camS;
+  let diffSec = camTotalSec - refTotalSec;
+
+  // Handle day boundary (max ±12 hours)
+  if (diffSec > 43200) diffSec -= 86400;
+  if (diffSec < -43200) diffSec += 86400;
+
+  const absDiff = Math.abs(diffSec);
+  const diffMin = Math.floor(absDiff / 60);
+  const diffRemSec = absDiff % 60;
+
+  let direction, dirClass;
+  if (diffSec > 0) {
+    direction = 'カメラ時刻が進んでいます';
+    dirClass = 'ahead';
+  } else if (diffSec < 0) {
+    direction = 'カメラ時刻が遅れています';
+    dirClass = 'behind';
+  } else {
+    direction = '時刻は正確です';
+    dirClass = 'exact';
+  }
+
+  const sign = diffSec > 0 ? '+' : diffSec < 0 ? '-' : '±';
+  let displayVal;
+  if (diffMin > 0) {
+    displayVal = `${sign}${diffMin}分${diffRemSec}秒`;
+  } else {
+    displayVal = `${sign}${absDiff}秒`;
+  }
+
+  document.getElementById('resultDir').textContent = direction;
+  document.getElementById('resultDir').className = `result-direction ${dirClass}`;
+  document.getElementById('resultVal').textContent = displayVal;
+  document.getElementById('resultVal').className = `result-value ${dirClass}`;
+  document.getElementById('resultUnit').textContent = `（${sign}${absDiff}秒）`;
+
+  const refStr = `${String(lockedRefTime.h).padStart(2,'0')}:${String(lockedRefTime.m).padStart(2,'0')}:${String(lockedRefTime.s).padStart(2,'0')}`;
+  const camStr = `${String(camH).padStart(2,'0')}:${String(camM).padStart(2,'0')}:${String(camS).padStart(2,'0')}`;
+  document.getElementById('resultDetail').innerHTML = `基準: ${refStr}<br>カメラ: ${camStr}`;
+
+  document.getElementById('resultPanel').classList.add('visible');
+
+  lastCalcResult = {
+    refTime: refStr,
+    camTime: camStr,
+    diffSec: diffSec,
+    direction: dirClass,
+    displayVal: displayVal
+  };
+}
+
+// ===== Save Record =====
+async function saveRecord() {
+  if (!lastCalcResult) return;
+
+  const record = {
+    timestamp: Date.now(),
+    refTime: lastCalcResult.refTime,
+    camTime: lastCalcResult.camTime,
+    diffSec: lastCalcResult.diffSec,
+    direction: lastCalcResult.direction,
+    displayVal: lastCalcResult.displayVal,
+    location: document.getElementById('camLocation').value.trim(),
+    viewDate: document.getElementById('viewDate').value,
+    witnessName: document.getElementById('witnessName').value.trim(),
+    witnessAge: document.getElementById('witnessAge').value,
+    notes: document.getElementById('notes').value.trim()
+  };
+
+  try {
+    await addRecord(record);
+    showToast('記録を保存しました');
+    resetForm();
+  } catch (e) {
+    showToast('保存に失敗しました', true);
+  }
+}
+
+function resetForm() {
+  resetLock();
+  document.getElementById('camH').value = '';
+  document.getElementById('camM').value = '';
+  document.getElementById('camS').value = '';
+  document.getElementById('camLocation').value = '';
+  document.getElementById('viewDate').value = '';
+  document.getElementById('witnessName').value = '';
+  document.getElementById('witnessAge').value = '';
+  document.getElementById('notes').value = '';
+}
+
+// ===== History Rendering =====
+async function renderHistory() {
+  const records = await getAllRecords();
+  const listEl = document.getElementById('historyList');
+
+  if (records.length === 0) {
+    listEl.innerHTML = `
+      <div class="history-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <p>記録はまだありません</p>
+      </div>
+    `;
+    return;
+  }
+
+  // List
+  let html = '';
+  records.forEach((r) => {
+    const d = new Date(r.timestamp);
+    const dateStr = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+
+    html += `
+      <div class="history-item">
+        <button class="history-delete" onclick="deleteItem(${r.id})" aria-label="削除">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+        <div class="history-item-header">
+          <div class="history-date">${dateStr}</div>
+          <div class="history-diff ${r.direction}">${r.displayVal}</div>
+        </div>
+        <div class="history-meta">
+          ${r.location ? `<strong>設置場所:</strong> ${escHtml(r.location)}<br>` : ''}
+          ${r.viewDate ? `<strong>閲覧日:</strong> ${r.viewDate}<br>` : ''}
+          ${r.witnessName ? `<strong>立会人:</strong> ${escHtml(r.witnessName)}${r.witnessAge ? ` (${r.witnessAge}歳)` : ''}<br>` : ''}
+          <strong>基準:</strong> ${r.refTime}　<strong>カメラ:</strong> ${r.camTime}
+          ${r.notes ? `<br><strong>補足:</strong> ${escHtml(r.notes)}` : ''}
+        </div>
+      </div>
+    `;
+  });
+
+  html += `<button class="clear-all-btn" onclick="clearAll()">すべての履歴を削除</button>`;
+  listEl.innerHTML = html;
+}
+
+function escHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+async function deleteItem(id) {
+  if (!confirm('この記録を削除しますか？')) return;
+  await deleteRecord(id);
+  renderHistory();
+  showToast('記録を削除しました');
+}
+
+async function clearAll() {
+  if (!confirm('すべての履歴を削除しますか？\nこの操作は取り消せません。')) return;
+  await clearAllRecords();
+  renderHistory();
+  showToast('すべての履歴を削除しました');
+}
+
+// ===== Tab Navigation =====
+function switchTab(name, el) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+  document.getElementById(`screen-${name}`).classList.add('active');
+  el.classList.add('active');
+
+  if (name === 'history') renderHistory();
+}
+
+// ===== Toast =====
+function showToast(msg, isError = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.background = isError ? 'rgba(239,68,68,0.9)' : 'rgba(34,197,94,0.9)';
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ===== Auto-advance time inputs =====
+['camH', 'camM', 'camS'].forEach((id, idx, arr) => {
+  const el = document.getElementById(id);
+  el.addEventListener('input', function() {
+    if (this.value.length >= 2 && idx < arr.length - 1) {
+      document.getElementById(arr[idx + 1]).focus();
+    }
+  });
+});
+
+// ===== Service Worker =====
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+// ===== Init =====
+startClock();
+</script>
+</body>
+</html>
