@@ -982,7 +982,7 @@ function resetForm() {
   document.getElementById('camM').value = '';
   document.getElementById('camS').value = '';
   document.getElementById('camLocation').value = '';
-  document.getElementById('viewDate').value = '';
+  document.getElementById('viewDate').value = new Date().toISOString().split('T')[0];
   document.getElementById('witnessName').value = '';
   document.getElementById('witnessAge').value = '';
   document.getElementById('notes').value = '';
@@ -1175,6 +1175,7 @@ if ('serviceWorker' in navigator) {
 
 // ===== Init =====
 startClock();
+document.getElementById('viewDate').value = new Date().toISOString().split('T')[0];
 </script>
 </body>
 </html>
