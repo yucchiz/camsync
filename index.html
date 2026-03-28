@@ -601,6 +601,152 @@ html, body {
 }
 
 .screen.active { animation: fadeIn 0.3s ease; }
+
+/* ===== Edit Modal ===== */
+.edit-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 150;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.edit-overlay.visible {
+  display: flex;
+}
+
+.edit-modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  width: 100%;
+  max-width: 480px;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 24px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.edit-modal::-webkit-scrollbar { display: none; }
+
+.edit-modal-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 20px;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+.edit-readonly {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 20px;
+}
+
+.edit-readonly-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  padding: 4px 0;
+}
+
+.edit-readonly-row .label {
+  color: var(--text-muted);
+}
+
+.edit-readonly-row .value {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.edit-readonly-row .value.ahead { color: var(--accent-blue); }
+.edit-readonly-row .value.behind { color: var(--accent-amber); }
+.edit-readonly-row .value.exact { color: var(--accent-green); }
+
+.edit-modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.edit-cancel-btn {
+  flex: 1;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.edit-cancel-btn:active {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.edit-save-btn {
+  flex: 1;
+  padding: 14px;
+  border: 1px solid var(--accent-green);
+  border-radius: var(--radius);
+  background: rgba(34, 197, 94, 0.08);
+  color: var(--accent-green);
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.edit-save-btn:active {
+  transform: scale(0.97);
+  background: rgba(34, 197, 94, 0.15);
+}
+
+/* ===== Extraction Time Group ===== */
+.extract-time-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.extract-time-group input[type="time"] {
+  flex: 1;
+  padding: 10px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
+}
+
+.extract-time-group input[type="time"]:focus {
+  border-color: var(--border-focus);
+}
+
+.extract-time-group .sep {
+  color: var(--text-muted);
+  font-size: 14px;
+  flex-shrink: 0;
+}
 </style>
 </head>
 <body>
@@ -678,6 +824,18 @@ html, body {
             <input type="date" id="viewDate">
           </div>
           <div class="field">
+            <label>抽出日</label>
+            <input type="date" id="extractDate">
+          </div>
+          <div class="field">
+            <label>抽出時間帯</label>
+            <div class="extract-time-group">
+              <input type="time" id="extractStartTime" placeholder="開始">
+              <span class="sep">〜</span>
+              <input type="time" id="extractEndTime" placeholder="終了">
+            </div>
+          </div>
+          <div class="field">
             <label>立会人 氏名</label>
             <input type="text" id="witnessName" placeholder="例：山田 太郎" style="font-family:'Noto Sans JP',sans-serif;font-size:14px;">
           </div>
@@ -744,6 +902,68 @@ html, body {
   </nav>
 </div>
 
+<!-- ===== Edit Modal ===== -->
+<div id="editOverlay" class="edit-overlay" onclick="if(event.target===this)closeEditModal()">
+  <div class="edit-modal">
+    <div class="edit-modal-title">記録を編集</div>
+
+    <!-- Read-only: calculation results -->
+    <div class="edit-readonly">
+      <div class="edit-readonly-row">
+        <span class="label">基準時刻</span>
+        <span id="editRefTime" class="value">--:--:--</span>
+      </div>
+      <div class="edit-readonly-row">
+        <span class="label">カメラ時刻</span>
+        <span id="editCamTime" class="value">--:--:--</span>
+      </div>
+      <div class="edit-readonly-row">
+        <span class="label">誤差</span>
+        <span id="editDiffVal" class="value">--</span>
+      </div>
+    </div>
+
+    <!-- Editable fields -->
+    <div class="field">
+      <label>防犯カメラ設置場所</label>
+      <input type="text" id="editLocation" placeholder="例：正面玄関 東側">
+    </div>
+    <div class="field">
+      <label>閲覧日</label>
+      <input type="date" id="editViewDate">
+    </div>
+    <div class="field">
+      <label>抽出日</label>
+      <input type="date" id="editExtractDate">
+    </div>
+    <div class="field">
+      <label>抽出時間帯</label>
+      <div class="extract-time-group">
+        <input type="time" id="editExtractStartTime" placeholder="開始">
+        <span class="sep">〜</span>
+        <input type="time" id="editExtractEndTime" placeholder="終了">
+      </div>
+    </div>
+    <div class="field">
+      <label>立会人 氏名</label>
+      <input type="text" id="editWitnessName" placeholder="例：山田 太郎" style="font-family:'Noto Sans JP',sans-serif;font-size:14px;">
+    </div>
+    <div class="field">
+      <label>立会人 年齢</label>
+      <input type="number" id="editWitnessAge" placeholder="例：45" inputmode="numeric" min="0" max="120">
+    </div>
+    <div class="field">
+      <label>補足情報</label>
+      <textarea id="editNotes" placeholder="カメラ型番、確認状況等"></textarea>
+    </div>
+
+    <div class="edit-modal-actions">
+      <button class="edit-cancel-btn" onclick="closeEditModal()">キャンセル</button>
+      <button class="edit-save-btn" onclick="saveEdit()">保存</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="toast"></div>
 
 <script>
@@ -752,6 +972,7 @@ let isLocked = false;
 let lockedRefTime = null;
 let lastCalcResult = null;
 let clockInterval = null;
+let editingRecordId = null;
 
 // ===== IndexedDB =====
 const DB_NAME = 'CamSyncDB';
@@ -798,6 +1019,23 @@ async function deleteRecord(id) {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite');
     tx.objectStore(STORE_NAME).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function updateRecord(id, data) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const getReq = store.get(id);
+    getReq.onsuccess = () => {
+      const record = getReq.result;
+      if (!record) { reject(new Error('Record not found')); return; }
+      Object.assign(record, data);
+      store.put(record);
+    };
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
@@ -962,6 +1200,9 @@ async function saveRecord() {
     displayVal: lastCalcResult.displayVal,
     location: document.getElementById('camLocation').value.trim(),
     viewDate: document.getElementById('viewDate').value,
+    extractDate: document.getElementById('extractDate').value,
+    extractStartTime: document.getElementById('extractStartTime').value,
+    extractEndTime: document.getElementById('extractEndTime').value,
     witnessName: document.getElementById('witnessName').value.trim(),
     witnessAge: document.getElementById('witnessAge').value,
     notes: document.getElementById('notes').value.trim()
@@ -983,6 +1224,9 @@ function resetForm() {
   document.getElementById('camS').value = '';
   document.getElementById('camLocation').value = '';
   document.getElementById('viewDate').value = '';
+  document.getElementById('extractDate').value = '';
+  document.getElementById('extractStartTime').value = '';
+  document.getElementById('extractEndTime').value = '';
   document.getElementById('witnessName').value = '';
   document.getElementById('witnessAge').value = '';
   document.getElementById('notes').value = '';
@@ -1004,7 +1248,7 @@ async function renderHistory() {
   }
 
   // List
-  let html = '<div class="history-swipe-hint">← スワイプで削除</div>';
+  let html = '<div class="history-swipe-hint">← スワイプで削除 ／ タップで編集</div>';
   records.forEach((r) => {
     const d = new Date(r.timestamp);
     const dateStr = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
@@ -1017,7 +1261,7 @@ async function renderHistory() {
             削除
           </span>
         </div>
-        <div class="history-item">
+        <div class="history-item" onclick="handleHistoryTap(event, ${r.id})">
           <div class="history-item-header">
             <div class="history-date">${dateStr}</div>
             <div class="history-diff ${r.direction}">${r.displayVal}</div>
@@ -1025,6 +1269,7 @@ async function renderHistory() {
           <div class="history-meta">
             ${r.location ? `<strong>設置場所:</strong> ${escHtml(r.location)}<br>` : ''}
             ${r.viewDate ? `<strong>閲覧日:</strong> ${r.viewDate}<br>` : ''}
+            ${r.extractDate ? `<strong>抽出:</strong> ${r.extractDate}${r.extractStartTime ? ` ${r.extractStartTime}` : ''}${r.extractEndTime ? `〜${r.extractEndTime}` : ''}<br>` : ''}
             ${r.witnessName ? `<strong>立会人:</strong> ${escHtml(r.witnessName)}${r.witnessAge ? ` (${r.witnessAge}歳)` : ''}<br>` : ''}
             <strong>基準:</strong> ${r.refTime}　<strong>カメラ:</strong> ${r.camTime}
             ${r.notes ? `<br><strong>補足:</strong> ${escHtml(r.notes)}` : ''}
@@ -1074,6 +1319,7 @@ function initSwipeHandlers() {
       startX = e.touches[0].clientX;
       currentX = startX;
       isSwiping = false;
+      item.dataset.justSwiped = '0';
       item.style.transition = 'none';
     }, { passive: true });
 
@@ -1099,6 +1345,11 @@ function initSwipeHandlers() {
       item.style.transition = 'transform 0.3s ease';
       const diffX = currentX - startX;
       const wasSwiped = item.classList.contains('swiped');
+
+      // Flag swipe gesture so tap handler can ignore it
+      if (isSwiping) {
+        item.dataset.justSwiped = '1';
+      }
 
       if (wasSwiped) {
         // If already open and swiped right, close it
@@ -1130,6 +1381,75 @@ function initSwipeHandlers() {
       });
     }
   });
+}
+
+// ===== Edit Modal =====
+async function openEditModal(id) {
+  const db = await openDB();
+  const tx = db.transaction(STORE_NAME, 'readonly');
+  const getReq = tx.objectStore(STORE_NAME).get(id);
+  getReq.onsuccess = () => {
+    const r = getReq.result;
+    if (!r) { showToast('記録が見つかりません', true); return; }
+
+    editingRecordId = id;
+
+    // Read-only fields
+    document.getElementById('editRefTime').textContent = r.refTime;
+    document.getElementById('editCamTime').textContent = r.camTime;
+    const diffEl = document.getElementById('editDiffVal');
+    diffEl.textContent = r.displayVal;
+    diffEl.className = `value ${r.direction}`;
+
+    // Editable fields
+    document.getElementById('editLocation').value = r.location || '';
+    document.getElementById('editViewDate').value = r.viewDate || '';
+    document.getElementById('editExtractDate').value = r.extractDate || '';
+    document.getElementById('editExtractStartTime').value = r.extractStartTime || '';
+    document.getElementById('editExtractEndTime').value = r.extractEndTime || '';
+    document.getElementById('editWitnessName').value = r.witnessName || '';
+    document.getElementById('editWitnessAge').value = r.witnessAge || '';
+    document.getElementById('editNotes').value = r.notes || '';
+
+    document.getElementById('editOverlay').classList.add('visible');
+  };
+}
+
+function closeEditModal() {
+  editingRecordId = null;
+  document.getElementById('editOverlay').classList.remove('visible');
+}
+
+async function saveEdit() {
+  if (editingRecordId === null) return;
+  const data = {
+    location: document.getElementById('editLocation').value.trim(),
+    viewDate: document.getElementById('editViewDate').value,
+    extractDate: document.getElementById('editExtractDate').value,
+    extractStartTime: document.getElementById('editExtractStartTime').value,
+    extractEndTime: document.getElementById('editExtractEndTime').value,
+    witnessName: document.getElementById('editWitnessName').value.trim(),
+    witnessAge: document.getElementById('editWitnessAge').value,
+    notes: document.getElementById('editNotes').value.trim()
+  };
+  try {
+    await updateRecord(editingRecordId, data);
+    showToast('記録を更新しました');
+    closeEditModal();
+    renderHistory();
+  } catch (e) {
+    showToast('更新に失敗しました', true);
+  }
+}
+
+function handleHistoryTap(event, id) {
+  const item = event.currentTarget;
+  if (item.classList.contains('swiped')) return;
+  if (item.dataset.justSwiped === '1') {
+    item.dataset.justSwiped = '0';
+    return;
+  }
+  openEditModal(id);
 }
 
 async function clearAll() {
