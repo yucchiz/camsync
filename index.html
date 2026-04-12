@@ -568,6 +568,36 @@ html, body {
   height: 14px;
 }
 
+.import-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  margin-top: 8px;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: 6px;
+  background: rgba(34, 197, 94, 0.08);
+  color: var(--accent-green);
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.import-btn:active {
+  background: rgba(34, 197, 94, 0.2);
+}
+
+.import-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.history-actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px 0;
+}
+
 .clear-all-btn {
   display: block;
   width: 100%;
@@ -863,6 +893,7 @@ html, body {
 
     <!-- ===== History Screen ===== -->
     <div id="screen-history" class="screen">
+      <input type="file" id="importFileInput" accept=".md,text/markdown" style="display:none" onchange="handleImportFile(this)">
       <div id="historyList"></div>
     </div>
 
@@ -1249,7 +1280,13 @@ async function renderHistory() {
     listEl.innerHTML = `
       <div class="history-empty">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        <p>記録はまだありません</p>
+        <p>記��はまだ��りません</p>
+      </div>
+      <div class="history-actions">
+        <button class="import-btn" onclick="document.getElementById('importFileInput').click()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          MDインポート
+        </button>
       </div>
     `;
     return;
@@ -1291,6 +1328,12 @@ async function renderHistory() {
     `;
   });
 
+  html += `<div class="history-actions">
+    <button class="import-btn" onclick="document.getElementById('importFileInput').click()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      MDインポート
+    </button>
+  </div>`;
   html += `<button class="clear-all-btn" onclick="clearAll()">すべての履歴を削除</button>`;
   listEl.innerHTML = html;
   initSwipeHandlers();
@@ -1505,6 +1548,103 @@ async function exportRecord(id) {
     a.click();
     URL.revokeObjectURL(url);
     showToast('Markdownを出力しました');
+  };
+}
+
+// ===== Import Record from Markdown =====
+function handleImportFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const md = e.target.result;
+      const record = parseMdRecord(md);
+      if (!record) { showToast('読み取れない形式です', true); return; }
+      await addRecord(record);
+      showToast('記録をインポートしました');
+      renderHistory();
+    } catch (err) {
+      showToast('インポートに失敗しました', true);
+    }
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function parseMdRecord(md) {
+  function extract(label) {
+    const re = new RegExp(`- \\*\\*${label}:\\*\\*\\s*(.+)`);
+    const m = md.match(re);
+    return m ? m[1].trim() : '';
+  }
+
+  const refTime = extract('基���時刻');
+  const camTime = extract('カメラ表示時刻');
+  const displayVal = extract('誤差');
+  if (!refTime || !camTime || !displayVal) return null;
+
+  // Parse diffSec and direction from displayVal
+  let diffSec = 0, direction = 'exact';
+  const diffMatch = displayVal.match(/^([+\-±])(?:(\d+)分)?(\d+)秒$/);
+  if (diffMatch) {
+    const sign = diffMatch[1];
+    const mins = diffMatch[2] ? parseInt(diffMatch[2]) : 0;
+    const secs = parseInt(diffMatch[3]);
+    diffSec = mins * 60 + secs;
+    if (sign === '-') { diffSec = -diffSec; direction = 'behind'; }
+    else if (sign === '+') { direction = 'ahead'; }
+    else { direction = 'exact'; }
+  }
+
+  // Parse timestamp from 記録日時
+  let timestamp = Date.now();
+  const dateStr = extract('記録日時');
+  if (dateStr) {
+    const dm = dateStr.match(/(\d{4})\/(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})/);
+    if (dm) {
+      timestamp = new Date(parseInt(dm[1]), parseInt(dm[2]) - 1, parseInt(dm[3]), parseInt(dm[4]), parseInt(dm[5])).getTime();
+    }
+  }
+
+  // Parse extract date/time
+  let extractDate = '', extractStartTime = '', extractEndTime = '';
+  const extStr = extract('抽出日');
+  if (extStr) {
+    const extMatch = extStr.match(/^(\d{4}-\d{2}-\d{2})(?:\s+(\d{2}:\d{2}))?(?:〜(\d{2}:\d{2}))?/);
+    if (extMatch) {
+      extractDate = extMatch[1] || '';
+      extractStartTime = extMatch[2] || '';
+      extractEndTime = extMatch[3] || '';
+    }
+  }
+
+  // Parse witness
+  let witnessName = '', witnessAge = '';
+  const witStr = extract('立会人');
+  if (witStr) {
+    const witMatch = witStr.match(/^(.+?)(?:\s*\((\d+)歳\))?$/);
+    if (witMatch) {
+      witnessName = witMatch[1].trim();
+      witnessAge = witMatch[2] || '';
+    }
+  }
+
+  return {
+    timestamp,
+    refTime,
+    camTime,
+    diffSec,
+    direction,
+    displayVal,
+    location: extract('カメラ設置場所'),
+    viewDate: extract('閲覧日'),
+    extractDate,
+    extractStartTime,
+    extractEndTime,
+    witnessName,
+    witnessAge,
+    notes: extract('補足')
   };
 }
 
