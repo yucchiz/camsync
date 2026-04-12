@@ -544,6 +544,30 @@ html, body {
   opacity: 0.6;
 }
 
+.export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  margin-top: 8px;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 6px;
+  background: rgba(59, 130, 246, 0.08);
+  color: var(--accent-blue);
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.export-btn:active {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.export-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
 .clear-all-btn {
   display: block;
   width: 100%;
@@ -743,7 +767,7 @@ html, body {
 <div class="app">
   <header class="app-header">
     <div class="app-title">Cam<span>Sync</span></div>
-    <div style="font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">v1.0</div>
+    <div style="font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">v2.0</div>
   </header>
 
   <div class="app-body">
@@ -1258,6 +1282,10 @@ async function renderHistory() {
             <strong>基準:</strong> ${r.refTime}　<strong>カメラ:</strong> ${r.camTime}
             ${r.notes ? `<br><strong>補足:</strong> ${escHtml(r.notes)}` : ''}
           </div>
+          <button class="export-btn" onclick="event.stopPropagation(); exportRecord(${r.id})">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            MD出力
+          </button>
         </div>
       </div>
     `;
@@ -1434,6 +1462,50 @@ function handleHistoryTap(event, id) {
     return;
   }
   openEditModal(id);
+}
+
+// ===== Export Record as Markdown =====
+async function exportRecord(id) {
+  const db = await openDB();
+  const tx = db.transaction(STORE_NAME, 'readonly');
+  const getReq = tx.objectStore(STORE_NAME).get(id);
+  getReq.onsuccess = () => {
+    const r = getReq.result;
+    if (!r) { showToast('記録が見つかりません', true); return; }
+
+    const d = new Date(r.timestamp);
+    const dateStr = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+
+    let md = `# CamSync 時刻同期記録\n\n`;
+    md += `- **記録日時:** ${dateStr}\n`;
+    md += `- **基準時刻:** ${r.refTime}\n`;
+    md += `- **カメラ表示時刻:** ${r.camTime}\n`;
+    md += `- **誤差:** ${r.displayVal}\n`;
+    if (r.location) md += `- **カメラ設置場所:** ${r.location}\n`;
+    if (r.viewDate) md += `- **閲覧日:** ${r.viewDate}\n`;
+    if (r.extractDate) {
+      let ext = `- **抽出日:** ${r.extractDate}`;
+      if (r.extractStartTime) ext += ` ${r.extractStartTime}`;
+      if (r.extractEndTime) ext += `〜${r.extractEndTime}`;
+      md += ext + `\n`;
+    }
+    if (r.witnessName) {
+      let w = `- **立会人:** ${r.witnessName}`;
+      if (r.witnessAge) w += ` (${r.witnessAge}歳)`;
+      md += w + `\n`;
+    }
+    if (r.notes) md += `- **補足:** ${r.notes}\n`;
+
+    const filename = `camsync_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}_${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}.md`;
+    const blob = new Blob([md], { type: 'text/markdown; charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('Markdownを出力しました');
+  };
 }
 
 async function clearAll() {
