@@ -186,29 +186,33 @@ html, body {
 .lock-btn {
   display: block;
   width: 100%;
-  padding: 16px;
+  padding: 20px;
   margin: 8px 0 20px;
-  border: 2px solid var(--accent-cyan);
+  border: none;
   border-radius: var(--radius);
-  background: rgba(6, 182, 212, 0.08);
-  color: var(--accent-cyan);
+  background: linear-gradient(135deg, #06b6d4, #3b82f6);
+  color: #fff;
   font-family: 'Noto Sans JP', sans-serif;
-  font-size: 15px;
-  font-weight: 500;
+  font-size: 18px;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
+  box-shadow: 0 0 20px rgba(6, 182, 212, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .lock-btn:active {
   transform: scale(0.97);
-  background: rgba(6, 182, 212, 0.15);
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.3), 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 .lock-btn.locked {
-  border-color: var(--text-muted);
-  background: rgba(71, 85, 105, 0.1);
+  border: none;
+  background: rgba(71, 85, 105, 0.2);
   color: var(--text-secondary);
+  box-shadow: none;
+  font-size: 15px;
+  font-weight: 500;
 }
 
 /* ===== Locked Time Display ===== */
@@ -554,21 +558,6 @@ html, body {
   cursor: pointer;
 }
 
-/* ===== Notice ===== */
-.notice {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 14px;
-  border-radius: 10px;
-  background: rgba(245, 158, 11, 0.06);
-  border: 1px solid rgba(245, 158, 11, 0.15);
-  margin-bottom: 16px;
-}
-
-.notice svg { flex-shrink: 0; width: 18px; height: 18px; color: var(--accent-amber); margin-top: 1px; }
-
-.notice p { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
 
 /* ===== Toast ===== */
 .toast {
@@ -771,7 +760,7 @@ html, body {
 
       <!-- Lock Button -->
       <button id="lockBtn" class="lock-btn" onclick="toggleLock()">
-        ▼ タップして基準時刻を固定
+        タップで固定
       </button>
 
       <!-- Locked Display -->
@@ -781,11 +770,6 @@ html, body {
         <div class="reset-link" onclick="resetLock()">リセット</div>
       </div>
 
-      <!-- Notice -->
-      <div class="notice">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        <p>「設定 ＞ 一般 ＞ 日付と時刻」で「自動設定」がオンになっていることを確認してください。</p>
-      </div>
 
       <!-- Camera Time Input -->
       <div class="card">
@@ -1092,7 +1076,7 @@ function toggleLock() {
 
   document.getElementById('liveClock').classList.add('locked');
   document.getElementById('liveClock').textContent = `${h}:${m}:${s}`;
-  document.getElementById('lockBtn').textContent = '● 基準時刻を固定しました';
+  document.getElementById('lockBtn').textContent = '固定済み';
   document.getElementById('lockBtn').classList.add('locked');
   document.getElementById('lockedDisplay').classList.add('visible');
   document.getElementById('lockedTime').textContent = `${h}:${m}:${s}`;
@@ -1106,7 +1090,7 @@ function resetLock() {
   isLocked = false;
   lockedRefTime = null;
   document.getElementById('liveClock').classList.remove('locked');
-  document.getElementById('lockBtn').textContent = '▼ タップして基準時刻を固定';
+  document.getElementById('lockBtn').textContent = 'タップで固定';
   document.getElementById('lockBtn').classList.remove('locked');
   document.getElementById('lockedDisplay').classList.remove('visible');
   document.getElementById('resultPanel').classList.remove('visible');
@@ -1478,10 +1462,13 @@ function showToast(msg, isError = false) {
   setTimeout(() => el.classList.remove('show'), 2500);
 }
 
-// ===== Auto-advance time inputs =====
+// ===== Auto-advance time inputs + 2-digit limit =====
 ['camH', 'camM', 'camS'].forEach((id, idx, arr) => {
   const el = document.getElementById(id);
   el.addEventListener('input', function() {
+    if (this.value.length > 2) {
+      this.value = this.value.slice(0, 2);
+    }
     if (this.value.length >= 2 && idx < arr.length - 1) {
       document.getElementById(arr[idx + 1]).focus();
     }
