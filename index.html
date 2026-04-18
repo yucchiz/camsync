@@ -1346,6 +1346,7 @@ function escHtml(str) {
 }
 
 async function deleteItem(id) {
+  if (!confirm('この記録を削除しますか？\nこの操作は取り消せません。')) return;
   await deleteRecord(id);
   const container = document.querySelector(`.history-swipe-container[data-id="${id}"]`);
   if (container) {
