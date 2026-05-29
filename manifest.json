@@ -1,0 +1,18 @@
+{
+  "name": "CamSync",
+  "short_name": "CamSync",
+  "description": "Security camera time drift calculator and local record keeper.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0a0e17",
+  "theme_color": "#0a0e17",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

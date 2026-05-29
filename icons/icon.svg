@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" role="img" aria-labelledby="title">
+  <title id="title">CamSync</title>
+  <rect width="192" height="192" rx="42" fill="#0a0e17"/>
+  <circle cx="96" cy="96" r="64" fill="#151d2e" stroke="#06b6d4" stroke-width="8"/>
+  <path d="M96 52v46l31 18" fill="none" stroke="#e2e8f0" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M45 139c13 18 32 28 51 28 27 0 51-17 60-42" fill="none" stroke="#3b82f6" stroke-width="8" stroke-linecap="round"/>
+  <path d="M147 53c-13-18-32-28-51-28-27 0-51 17-60 42" fill="none" stroke="#22c55e" stroke-width="8" stroke-linecap="round"/>
+</svg>

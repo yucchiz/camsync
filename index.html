@@ -3,14 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0a0e17">
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <title>CamSync</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -32,13 +30,15 @@
   --radius: 14px;
   --safe-top: env(safe-area-inset-top, 20px);
   --safe-bottom: env(safe-area-inset-bottom, 20px);
+  --font-sans: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", "Meiryo", sans-serif;
+  --font-mono: "SFMono-Regular", "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
 }
 
 html, body {
   height: 100%;
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-family: 'Noto Sans JP', sans-serif;
+  font-family: var(--font-sans);
   font-weight: 400;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
@@ -62,7 +62,7 @@ html, body {
 }
 
 .app-title {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 18px;
   font-weight: 600;
   letter-spacing: 1.5px;
@@ -109,7 +109,7 @@ html, body {
   background: none;
   border: none;
   color: var(--text-muted);
-  font-family: 'Noto Sans JP', sans-serif;
+  font-family: var(--font-sans);
   font-size: 10px;
   cursor: pointer;
   transition: color 0.2s;
@@ -139,7 +139,7 @@ html, body {
 }
 
 .live-clock {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 52px;
   font-weight: 300;
   letter-spacing: 3px;
@@ -153,7 +153,7 @@ html, body {
 }
 
 .clock-date {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 13px;
   color: var(--text-secondary);
   margin-top: 6px;
@@ -192,7 +192,7 @@ html, body {
   border-radius: var(--radius);
   background: linear-gradient(135deg, #06b6d4, #3b82f6);
   color: #fff;
-  font-family: 'Noto Sans JP', sans-serif;
+  font-family: var(--font-sans);
   font-size: 18px;
   font-weight: 700;
   cursor: pointer;
@@ -236,7 +236,7 @@ html, body {
 }
 
 .locked-time-display .time {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 28px;
   font-weight: 500;
   color: var(--accent-cyan);
@@ -291,7 +291,7 @@ html, body {
   border: 1px solid var(--border);
   border-radius: 10px;
   color: var(--text-primary);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 16px;
   outline: none;
   transition: border-color 0.2s;
@@ -305,12 +305,12 @@ html, body {
 
 .field input[type="date"],
 .field select {
-  font-family: 'Noto Sans JP', sans-serif;
+  font-family: var(--font-sans);
   font-size: 14px;
 }
 
 .field textarea {
-  font-family: 'Noto Sans JP', sans-serif;
+  font-family: var(--font-sans);
   font-size: 14px;
   resize: vertical;
   min-height: 60px;
@@ -331,7 +331,7 @@ html, body {
 }
 
 .time-input-group .sep {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 22px;
   color: var(--text-muted);
 }
@@ -346,7 +346,7 @@ html, body {
   border-radius: var(--radius);
   background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
   color: #fff;
-  font-family: 'Noto Sans JP', sans-serif;
+  font-family: var(--font-sans);
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
@@ -389,7 +389,7 @@ html, body {
 .result-direction.exact { color: var(--accent-green); }
 
 .result-value {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 48px;
   font-weight: 600;
   line-height: 1.1;
@@ -406,7 +406,7 @@ html, body {
 }
 
 .result-detail {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 13px;
   color: var(--text-muted);
   margin-top: 12px;
@@ -424,7 +424,7 @@ html, body {
   border-radius: var(--radius);
   background: rgba(34, 197, 94, 0.08);
   color: var(--accent-green);
-  font-family: 'Noto Sans JP', sans-serif;
+  font-family: var(--font-sans);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -506,13 +506,13 @@ html, body {
 }
 
 .history-date {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
   color: var(--text-muted);
 }
 
 .history-diff {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 18px;
   font-weight: 600;
 }
@@ -554,7 +554,7 @@ html, body {
   border-radius: 6px;
   background: rgba(59, 130, 246, 0.08);
   color: var(--accent-blue);
-  font-family: 'Noto Sans JP', sans-serif;
+  font-family: var(--font-sans);
   font-size: 11px;
   cursor: pointer;
 }
@@ -578,7 +578,7 @@ html, body {
   border-radius: 6px;
   background: rgba(34, 197, 94, 0.08);
   color: var(--accent-green);
-  font-family: 'Noto Sans JP', sans-serif;
+  font-family: var(--font-sans);
   font-size: 11px;
   cursor: pointer;
 }
@@ -607,7 +607,7 @@ html, body {
   border-radius: var(--radius);
   background: transparent;
   color: var(--text-muted);
-  font-family: 'Noto Sans JP', sans-serif;
+  font-family: var(--font-sans);
   font-size: 13px;
   cursor: pointer;
 }
@@ -708,7 +708,7 @@ html, body {
 }
 
 .edit-readonly-row .value {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   color: var(--text-primary);
   font-weight: 500;
 }
@@ -730,7 +730,7 @@ html, body {
   border-radius: var(--radius);
   background: transparent;
   color: var(--text-secondary);
-  font-family: 'Noto Sans JP', sans-serif;
+  font-family: var(--font-sans);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -748,7 +748,7 @@ html, body {
   border-radius: var(--radius);
   background: rgba(34, 197, 94, 0.08);
   color: var(--accent-green);
-  font-family: 'Noto Sans JP', sans-serif;
+  font-family: var(--font-sans);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -774,7 +774,7 @@ html, body {
   border: 1px solid var(--border);
   border-radius: 10px;
   color: var(--text-primary);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 14px;
   outline: none;
   transition: border-color 0.2s;
@@ -797,7 +797,7 @@ html, body {
 <div class="app">
   <header class="app-header">
     <div class="app-title">Cam<span>Sync</span></div>
-    <div style="font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">v2.0</div>
+    <div style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">v2.0</div>
   </header>
 
   <div class="app-body">
@@ -806,10 +806,10 @@ html, body {
 
       <!-- Live Clock -->
       <div class="clock-section">
-        <div class="clock-label">基準時刻（端末 NTP 同期）</div>
+        <div class="clock-label">基準時刻（端末時刻）</div>
         <div id="liveClock" class="live-clock">00:00:00</div>
         <div id="liveDate" class="clock-date"></div>
-        <div class="clock-status">NTP 同期済み</div>
+        <div class="clock-status">端末時刻を使用中</div>
       </div>
 
       <!-- Lock Button -->
@@ -831,11 +831,11 @@ html, body {
         <div class="field">
           <label>防犯カメラに表示されている時刻</label>
           <div class="time-input-group">
-            <input type="number" id="camH" min="0" max="23" placeholder="HH" inputmode="numeric" maxlength="2">
+            <input type="text" id="camH" placeholder="HH" inputmode="numeric" maxlength="2" autocomplete="off">
             <span class="sep">:</span>
-            <input type="number" id="camM" min="0" max="59" placeholder="MM" inputmode="numeric" maxlength="2">
+            <input type="text" id="camM" placeholder="MM" inputmode="numeric" maxlength="2" autocomplete="off">
             <span class="sep">:</span>
-            <input type="number" id="camS" min="0" max="59" placeholder="SS" inputmode="numeric" maxlength="2">
+            <input type="text" id="camS" placeholder="SS" inputmode="numeric" maxlength="2" autocomplete="off">
           </div>
         </div>
       </div>
@@ -875,7 +875,7 @@ html, body {
           </div>
           <div class="field">
             <label>立会人 氏名</label>
-            <input type="text" id="witnessName" placeholder="例：山田 太郎" style="font-family:'Noto Sans JP',sans-serif;font-size:14px;">
+            <input type="text" id="witnessName" placeholder="例：山田 太郎" style="font-family:var(--font-sans);font-size:14px;">
           </div>
           <div class="field">
             <label>立会人 年齢</label>
@@ -902,7 +902,7 @@ html, body {
       <div class="card">
         <div class="card-title">CamSync について</div>
         <p style="font-size:13px;color:var(--text-secondary);line-height:1.8;">
-          防犯カメラの表示時刻と、端末のNTP同期時刻との誤差を計算・記録するツールです。完全オフラインで動作し、データは端末内のみに保存されます。
+          防犯カメラの表示時刻と、端末時刻との誤差を計算・記録するツールです。完全オフラインで動作し、データは端末内のみに保存されます。
         </p>
       </div>
       <div class="card">
@@ -918,7 +918,7 @@ html, body {
       <div class="card">
         <div class="card-title">注意事項</div>
         <p style="font-size:13px;color:var(--text-secondary);line-height:1.8;">
-          端末の「日付と時刻」が「自動設定」になっている場合、NTPサーバーと同期された高精度な時刻が使用されます。手動設定の場合は精度が保証されません。
+          端末の「日付と時刻」が「自動設定」になっている場合、ネットワーク時刻に同期された端末時刻が使用されます。手動設定の場合は精度が保証されません。
         </p>
       </div>
     </div>
@@ -985,7 +985,7 @@ html, body {
     </div>
     <div class="field">
       <label>立会人 氏名</label>
-      <input type="text" id="editWitnessName" placeholder="例：山田 太郎" style="font-family:'Noto Sans JP',sans-serif;font-size:14px;">
+      <input type="text" id="editWitnessName" placeholder="例：山田 太郎" style="font-family:var(--font-sans);font-size:14px;">
     </div>
     <div class="field">
       <label>立会人 年齢</label>
@@ -1012,6 +1012,43 @@ let lockedRefTime = null;
 let lastCalcResult = null;
 let clockInterval = null;
 let editingRecordId = null;
+
+const DIRECTION_CLASSES = new Set(['ahead', 'behind', 'exact']);
+const MAX_IMPORT_BYTES = 1024 * 1024;
+
+function pad2(value) {
+  return String(value).padStart(2, '0');
+}
+
+function formatHms(h, m, s) {
+  return `${pad2(h)}:${pad2(m)}:${pad2(s)}`;
+}
+
+function formatDateInput(date) {
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+}
+
+function formatRecordDateTime(timestamp) {
+  const d = new Date(timestamp);
+  return `${d.getFullYear()}/${pad2(d.getMonth()+1)}/${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
+function normalizeDirection(direction) {
+  return DIRECTION_CLASSES.has(direction) ? direction : 'exact';
+}
+
+function setResultDetail(refStr, camStr) {
+  const detail = document.getElementById('resultDetail');
+  detail.replaceChildren(
+    document.createTextNode(`基準: ${refStr}`),
+    document.createElement('br'),
+    document.createTextNode(`カメラ: ${camStr}`)
+  );
+}
+
+function normalizeMarkdownValue(value) {
+  return String(value || '').replace(/\r?\n/g, ' / ').trim();
+}
 
 // ===== IndexedDB =====
 const DB_NAME = 'CamSyncDB';
@@ -1049,6 +1086,16 @@ async function getAllRecords() {
     const tx = db.transaction(STORE_NAME, 'readonly');
     const req = tx.objectStore(STORE_NAME).getAll();
     req.onsuccess = () => resolve(req.result.sort((a, b) => b.timestamp - a.timestamp));
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function getRecord(id) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const req = tx.objectStore(STORE_NAME).get(id);
+    req.onsuccess = () => resolve(req.result || null);
     req.onerror = () => reject(req.error);
   });
 }
@@ -1093,17 +1140,17 @@ async function clearAllRecords() {
 // ===== Live Clock =====
 function updateClock() {
   const now = new Date();
-  const h = String(now.getHours()).padStart(2, '0');
-  const m = String(now.getMinutes()).padStart(2, '0');
-  const s = String(now.getSeconds()).padStart(2, '0');
+  const h = pad2(now.getHours());
+  const m = pad2(now.getMinutes());
+  const s = pad2(now.getSeconds());
   const el = document.getElementById('liveClock');
   if (!isLocked) {
     el.textContent = `${h}:${m}:${s}`;
   }
   const dateEl = document.getElementById('liveDate');
   const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
+  const month = pad2(now.getMonth() + 1);
+  const day = pad2(now.getDate());
   const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
   dateEl.textContent = `${year}/${month}/${day} (${weekdays[now.getDay()]})`;
 }
@@ -1125,9 +1172,9 @@ function toggleLock() {
   };
   isLocked = true;
 
-  const h = String(lockedRefTime.h).padStart(2, '0');
-  const m = String(lockedRefTime.m).padStart(2, '0');
-  const s = String(lockedRefTime.s).padStart(2, '0');
+  const h = pad2(lockedRefTime.h);
+  const m = pad2(lockedRefTime.m);
+  const s = pad2(lockedRefTime.s);
 
   document.getElementById('liveClock').classList.add('locked');
   document.getElementById('liveClock').textContent = `${h}:${m}:${s}`;
@@ -1136,9 +1183,7 @@ function toggleLock() {
   document.getElementById('lockedDisplay').classList.add('visible');
   document.getElementById('lockedTime').textContent = `${h}:${m}:${s}`;
 
-  // Set viewDate to today
-  const today = now.toISOString().split('T')[0];
-  document.getElementById('viewDate').value = today;
+  document.getElementById('viewDate').value = formatDateInput(now);
 }
 
 function resetLock() {
@@ -1159,17 +1204,12 @@ function calculate() {
     return;
   }
 
-  const camH = parseInt(document.getElementById('camH').value);
-  const camM = parseInt(document.getElementById('camM').value);
-  const camS = parseInt(document.getElementById('camS').value);
+  const camH = parseTimePart(document.getElementById('camH').value, 23);
+  const camM = parseTimePart(document.getElementById('camM').value, 59);
+  const camS = parseTimePart(document.getElementById('camS').value, 59);
 
-  if (isNaN(camH) || isNaN(camM) || isNaN(camS)) {
+  if (camH === null || camM === null || camS === null) {
     showToast('カメラ時刻を入力してください', true);
-    return;
-  }
-
-  if (camH < 0 || camH > 23 || camM < 0 || camM > 59 || camS < 0 || camS > 59) {
-    showToast('有効な時刻を入力してください', true);
     return;
   }
 
@@ -1211,9 +1251,9 @@ function calculate() {
   document.getElementById('resultVal').className = `result-value ${dirClass}`;
   document.getElementById('resultUnit').textContent = `（${sign}${absDiff}秒）`;
 
-  const refStr = `${String(lockedRefTime.h).padStart(2,'0')}:${String(lockedRefTime.m).padStart(2,'0')}:${String(lockedRefTime.s).padStart(2,'0')}`;
-  const camStr = `${String(camH).padStart(2,'0')}:${String(camM).padStart(2,'0')}:${String(camS).padStart(2,'0')}`;
-  document.getElementById('resultDetail').innerHTML = `基準: ${refStr}<br>カメラ: ${camStr}`;
+  const refStr = formatHms(lockedRefTime.h, lockedRefTime.m, lockedRefTime.s);
+  const camStr = formatHms(camH, camM, camS);
+  setResultDetail(refStr, camStr);
 
   document.getElementById('resultPanel').classList.add('visible');
 
@@ -1224,6 +1264,14 @@ function calculate() {
     direction: dirClass,
     displayVal: displayVal
   };
+}
+
+function parseTimePart(value, max) {
+  const trimmed = String(value).trim();
+  if (!/^\d{1,2}$/.test(trimmed)) return null;
+  const parsed = Number(trimmed);
+  if (parsed < 0 || parsed > max) return null;
+  return parsed;
 }
 
 // ===== Save Record =====
@@ -1273,14 +1321,27 @@ function resetForm() {
 
 // ===== History Rendering =====
 async function renderHistory() {
-  const records = await getAllRecords();
   const listEl = document.getElementById('historyList');
+  let records;
+
+  try {
+    records = await getAllRecords();
+  } catch (e) {
+    listEl.innerHTML = `
+      <div class="history-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <p>履歴を読み込めませんでした</p>
+      </div>
+    `;
+    showToast('履歴の読み込みに失敗しました', true);
+    return;
+  }
 
   if (records.length === 0) {
     listEl.innerHTML = `
       <div class="history-empty">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        <p>記��はまだ��りません</p>
+        <p>記録はまだありません</p>
       </div>
       <div class="history-actions">
         <button class="import-btn" onclick="document.getElementById('importFileInput').click()">
@@ -1295,8 +1356,8 @@ async function renderHistory() {
   // List
   let html = '<div class="history-swipe-hint">← スワイプで削除 ／ タップで編集</div>';
   records.forEach((r) => {
-    const d = new Date(r.timestamp);
-    const dateStr = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const dateStr = formatRecordDateTime(r.timestamp);
+    const directionClass = normalizeDirection(r.direction);
 
     html += `
       <div class="history-swipe-container" data-id="${r.id}">
@@ -1309,14 +1370,14 @@ async function renderHistory() {
         <div class="history-item" onclick="handleHistoryTap(event, ${r.id})">
           <div class="history-item-header">
             <div class="history-date">${dateStr}</div>
-            <div class="history-diff ${r.direction}">${r.displayVal}</div>
+            <div class="history-diff ${directionClass}">${escHtml(r.displayVal)}</div>
           </div>
           <div class="history-meta">
             ${r.location ? `<strong>設置場所:</strong> ${escHtml(r.location)}<br>` : ''}
-            ${r.viewDate ? `<strong>閲覧日:</strong> ${r.viewDate}<br>` : ''}
-            ${r.extractDate ? `<strong>抽出:</strong> ${r.extractDate}${r.extractStartTime ? ` ${r.extractStartTime}` : ''}${r.extractEndTime ? `〜${r.extractEndTime}` : ''}<br>` : ''}
-            ${r.witnessName ? `<strong>立会人:</strong> ${escHtml(r.witnessName)}${r.witnessAge ? ` (${r.witnessAge}歳)` : ''}<br>` : ''}
-            <strong>基準:</strong> ${r.refTime}　<strong>カメラ:</strong> ${r.camTime}
+            ${r.viewDate ? `<strong>閲覧日:</strong> ${escHtml(r.viewDate)}<br>` : ''}
+            ${r.extractDate ? `<strong>抽出:</strong> ${escHtml(r.extractDate)}${r.extractStartTime ? ` ${escHtml(r.extractStartTime)}` : ''}${r.extractEndTime ? `〜${escHtml(r.extractEndTime)}` : ''}<br>` : ''}
+            ${r.witnessName ? `<strong>立会人:</strong> ${escHtml(r.witnessName)}${r.witnessAge ? ` (${escHtml(r.witnessAge)}歳)` : ''}<br>` : ''}
+            <strong>基準:</strong> ${escHtml(r.refTime)}　<strong>カメラ:</strong> ${escHtml(r.camTime)}
             ${r.notes ? `<br><strong>補足:</strong> ${escHtml(r.notes)}` : ''}
           </div>
           <button class="export-btn" onclick="event.stopPropagation(); exportRecord(${r.id})">
@@ -1441,11 +1502,8 @@ function initSwipeHandlers() {
 
 // ===== Edit Modal =====
 async function openEditModal(id) {
-  const db = await openDB();
-  const tx = db.transaction(STORE_NAME, 'readonly');
-  const getReq = tx.objectStore(STORE_NAME).get(id);
-  getReq.onsuccess = () => {
-    const r = getReq.result;
+  try {
+    const r = await getRecord(id);
     if (!r) { showToast('記録が見つかりません', true); return; }
 
     editingRecordId = id;
@@ -1468,7 +1526,9 @@ async function openEditModal(id) {
     document.getElementById('editNotes').value = r.notes || '';
 
     document.getElementById('editOverlay').classList.add('visible');
-  };
+  } catch (e) {
+    showToast('記録の読み込みに失敗しました', true);
+  }
 }
 
 function closeEditModal() {
@@ -1510,37 +1570,34 @@ function handleHistoryTap(event, id) {
 
 // ===== Export Record as Markdown =====
 async function exportRecord(id) {
-  const db = await openDB();
-  const tx = db.transaction(STORE_NAME, 'readonly');
-  const getReq = tx.objectStore(STORE_NAME).get(id);
-  getReq.onsuccess = () => {
-    const r = getReq.result;
+  try {
+    const r = await getRecord(id);
     if (!r) { showToast('記録が見つかりません', true); return; }
 
     const d = new Date(r.timestamp);
-    const dateStr = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    const dateStr = formatRecordDateTime(r.timestamp);
 
     let md = `# CamSync 時刻同期記録\n\n`;
     md += `- **記録日時:** ${dateStr}\n`;
-    md += `- **基準時刻:** ${r.refTime}\n`;
-    md += `- **カメラ表示時刻:** ${r.camTime}\n`;
-    md += `- **誤差:** ${r.displayVal}\n`;
-    if (r.location) md += `- **カメラ設置場所:** ${r.location}\n`;
-    if (r.viewDate) md += `- **閲覧日:** ${r.viewDate}\n`;
+    md += `- **基準時刻:** ${normalizeMarkdownValue(r.refTime)}\n`;
+    md += `- **カメラ表示時刻:** ${normalizeMarkdownValue(r.camTime)}\n`;
+    md += `- **誤差:** ${normalizeMarkdownValue(r.displayVal)}\n`;
+    if (r.location) md += `- **カメラ設置場所:** ${normalizeMarkdownValue(r.location)}\n`;
+    if (r.viewDate) md += `- **閲覧日:** ${normalizeMarkdownValue(r.viewDate)}\n`;
     if (r.extractDate) {
-      let ext = `- **抽出日:** ${r.extractDate}`;
-      if (r.extractStartTime) ext += ` ${r.extractStartTime}`;
-      if (r.extractEndTime) ext += `〜${r.extractEndTime}`;
+      let ext = `- **抽出日:** ${normalizeMarkdownValue(r.extractDate)}`;
+      if (r.extractStartTime) ext += ` ${normalizeMarkdownValue(r.extractStartTime)}`;
+      if (r.extractEndTime) ext += `〜${normalizeMarkdownValue(r.extractEndTime)}`;
       md += ext + `\n`;
     }
     if (r.witnessName) {
-      let w = `- **立会人:** ${r.witnessName}`;
-      if (r.witnessAge) w += ` (${r.witnessAge}歳)`;
+      let w = `- **立会人:** ${normalizeMarkdownValue(r.witnessName)}`;
+      if (r.witnessAge) w += ` (${normalizeMarkdownValue(r.witnessAge)}歳)`;
       md += w + `\n`;
     }
-    if (r.notes) md += `- **補足:** ${r.notes}\n`;
+    if (r.notes) md += `- **補足:** ${normalizeMarkdownValue(r.notes)}\n`;
 
-    const filename = `camsync_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}_${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}.md`;
+    const filename = `camsync_${d.getFullYear()}${pad2(d.getMonth()+1)}${pad2(d.getDate())}_${pad2(d.getHours())}${pad2(d.getMinutes())}.md`;
     const blob = new Blob([md], { type: 'text/markdown; charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1549,13 +1606,25 @@ async function exportRecord(id) {
     a.click();
     URL.revokeObjectURL(url);
     showToast('Markdownを出力しました');
-  };
+  } catch (e) {
+    showToast('Markdown出力に失敗しました', true);
+  }
 }
 
 // ===== Import Record from Markdown =====
 function handleImportFile(input) {
   const file = input.files[0];
   if (!file) return;
+  if (!/\.md$/i.test(file.name) && file.type && file.type !== 'text/markdown') {
+    showToast('Markdownファイルを選択してください', true);
+    input.value = '';
+    return;
+  }
+  if (file.size > MAX_IMPORT_BYTES) {
+    showToast('インポートできるファイルは1MBまでです', true);
+    input.value = '';
+    return;
+  }
   const reader = new FileReader();
   reader.onload = async (e) => {
     try {
@@ -1580,23 +1649,24 @@ function parseMdRecord(md) {
     return m ? m[1].trim() : '';
   }
 
-  const refTime = extract('基���時刻');
+  const refTime = extract('基準時刻');
   const camTime = extract('カメラ表示時刻');
   const displayVal = extract('誤差');
   if (!refTime || !camTime || !displayVal) return null;
 
+  if (!/^\d{2}:\d{2}:\d{2}$/.test(refTime) || !/^\d{2}:\d{2}:\d{2}$/.test(camTime)) return null;
+
   // Parse diffSec and direction from displayVal
   let diffSec = 0, direction = 'exact';
   const diffMatch = displayVal.match(/^([+\-±])(?:(\d+)分)?(\d+)秒$/);
-  if (diffMatch) {
-    const sign = diffMatch[1];
-    const mins = diffMatch[2] ? parseInt(diffMatch[2]) : 0;
-    const secs = parseInt(diffMatch[3]);
-    diffSec = mins * 60 + secs;
-    if (sign === '-') { diffSec = -diffSec; direction = 'behind'; }
-    else if (sign === '+') { direction = 'ahead'; }
-    else { direction = 'exact'; }
-  }
+  if (!diffMatch) return null;
+  const sign = diffMatch[1];
+  const mins = diffMatch[2] ? parseInt(diffMatch[2]) : 0;
+  const secs = parseInt(diffMatch[3]);
+  diffSec = mins * 60 + secs;
+  if (sign === '-') { diffSec = -diffSec; direction = 'behind'; }
+  else if (sign === '+') { direction = 'ahead'; }
+  else { direction = 'exact'; }
 
   // Parse timestamp from 記録日時
   let timestamp = Date.now();
@@ -1651,9 +1721,13 @@ function parseMdRecord(md) {
 
 async function clearAll() {
   if (!confirm('すべての履歴を削除しますか？\nこの操作は取り消せません。')) return;
-  await clearAllRecords();
-  renderHistory();
-  showToast('すべての履歴を削除しました');
+  try {
+    await clearAllRecords();
+    renderHistory();
+    showToast('すべての履歴を削除しました');
+  } catch (e) {
+    showToast('履歴の削除に失敗しました', true);
+  }
 }
 
 // ===== Tab Navigation =====
@@ -1679,6 +1753,7 @@ function showToast(msg, isError = false) {
 ['camH', 'camM', 'camS'].forEach((id, idx, arr) => {
   const el = document.getElementById(id);
   el.addEventListener('input', function() {
+    this.value = this.value.replace(/\D/g, '');
     if (this.value.length > 2) {
       this.value = this.value.slice(0, 2);
     }
@@ -1690,7 +1765,9 @@ function showToast(msg, isError = false) {
 
 // ===== Service Worker =====
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.register('sw.js').catch((error) => {
+    console.warn('Service worker registration failed:', error);
+  });
 }
 
 // ===== Init =====
