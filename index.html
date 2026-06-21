@@ -336,6 +336,57 @@ html, body {
   color: var(--text-muted);
 }
 
+.timecalc-operator {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.timecalc-operator button {
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.timecalc-operator button.active {
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+  background: rgba(6, 182, 212, 0.08);
+}
+
+.timecalc-result-main {
+  font-family: var(--font-mono);
+  font-size: 46px;
+  font-weight: 600;
+  color: var(--accent-cyan);
+  line-height: 1.1;
+}
+
+.timecalc-day-note {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  padding: 4px 10px;
+  margin-top: 10px;
+  border-radius: 999px;
+  background: rgba(6, 182, 212, 0.08);
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.timecalc-day-note.shifted {
+  color: var(--accent-amber);
+  background: rgba(245, 158, 11, 0.08);
+}
+
 /* ===== Calculate Button ===== */
 .calc-btn {
   display: block;
@@ -790,6 +841,7 @@ html, body {
   font-size: 14px;
   flex-shrink: 0;
 }
+
 </style>
 </head>
 <body>
@@ -797,7 +849,7 @@ html, body {
 <div class="app">
   <header class="app-header">
     <div class="app-title">Cam<span>Sync</span></div>
-    <div style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">v2.0</div>
+    <div style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">v2.1</div>
   </header>
 
   <div class="app-body">
@@ -891,6 +943,53 @@ html, body {
       </div>
     </div>
 
+    <!-- ===== Time Calculator Screen ===== -->
+    <div id="screen-timecalc" class="screen">
+      <div class="card">
+        <div class="card-title">時刻</div>
+        <div class="field">
+          <label>計算の基準にする時刻（24時間表記）</label>
+          <div class="time-input-group">
+            <input type="text" id="timeCalcH" placeholder="HH" inputmode="numeric" maxlength="2" autocomplete="off">
+            <span class="sep">:</span>
+            <input type="text" id="timeCalcM" placeholder="MM" inputmode="numeric" maxlength="2" autocomplete="off">
+            <span class="sep">:</span>
+            <input type="text" id="timeCalcS" placeholder="SS" inputmode="numeric" maxlength="2" autocomplete="off">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">計算</div>
+        <div class="field">
+          <label>操作</label>
+          <div class="timecalc-operator" role="group" aria-label="加算または減算">
+            <button type="button" id="timeCalcAddBtn" class="active" onclick="setTimeCalcOperator('add')">＋ 加算</button>
+            <button type="button" id="timeCalcSubBtn" onclick="setTimeCalcOperator('sub')">− 減算</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>時間差</label>
+          <div class="time-input-group">
+            <input type="text" id="timeCalcDiffH" placeholder="HH" inputmode="numeric" maxlength="3" autocomplete="off">
+            <span class="sep">:</span>
+            <input type="text" id="timeCalcDiffM" placeholder="MM" inputmode="numeric" maxlength="2" autocomplete="off">
+            <span class="sep">:</span>
+            <input type="text" id="timeCalcDiffS" placeholder="SS" inputmode="numeric" maxlength="2" autocomplete="off">
+          </div>
+        </div>
+      </div>
+
+      <button class="calc-btn" onclick="calculateTimeOffset()">結果時刻を計算</button>
+
+      <div id="timeCalcResultPanel" class="result-panel">
+        <div class="result-direction exact">結果時刻</div>
+        <div id="timeCalcResultTime" class="timecalc-result-main">--:--:--</div>
+        <div id="timeCalcDayNote" class="timecalc-day-note">同日</div>
+        <div id="timeCalcDetail" class="result-detail"></div>
+      </div>
+    </div>
+
     <!-- ===== History Screen ===== -->
     <div id="screen-history" class="screen">
       <input type="file" id="importFileInput" accept=".md,text/markdown" style="display:none" onchange="handleImportFile(this)">
@@ -929,6 +1028,10 @@ html, body {
     <button class="tab-item active" onclick="switchTab('calc', this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
       <span>計算</span>
+    </button>
+    <button class="tab-item" onclick="switchTab('timecalc', this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="10" y2="12"/><line x1="14" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="10" y2="16"/><line x1="14" y1="16" x2="16" y2="16"/></svg>
+      <span>時間電卓</span>
     </button>
     <button class="tab-item" onclick="switchTab('history', this)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
@@ -1012,6 +1115,7 @@ let lockedRefTime = null;
 let lastCalcResult = null;
 let clockInterval = null;
 let editingRecordId = null;
+let timeCalcOperator = 'add';
 
 const DIRECTION_CLASSES = new Set(['ahead', 'behind', 'exact']);
 const MAX_IMPORT_BYTES = 1024 * 1024;
@@ -1272,6 +1376,92 @@ function parseTimePart(value, max) {
   const parsed = Number(trimmed);
   if (parsed < 0 || parsed > max) return null;
   return parsed;
+}
+
+// ===== Time Calculator =====
+function setTimeCalcOperator(operator) {
+  timeCalcOperator = operator === 'sub' ? 'sub' : 'add';
+  document.getElementById('timeCalcAddBtn').classList.toggle('active', timeCalcOperator === 'add');
+  document.getElementById('timeCalcSubBtn').classList.toggle('active', timeCalcOperator === 'sub');
+}
+
+function parseDurationPart(value, max, allowThreeDigits = false) {
+  const trimmed = String(value).trim();
+  if (trimmed === '') return 0;
+  const re = allowThreeDigits ? /^\d{1,3}$/ : /^\d{1,2}$/;
+  if (!re.test(trimmed)) return null;
+  const parsed = Number(trimmed);
+  if (parsed < 0 || parsed > max) return null;
+  return parsed;
+}
+
+function formatDuration(h, m, s) {
+  return `${pad2(h)}:${pad2(m)}:${pad2(s)}`;
+}
+
+function describeDayOffset(dayOffset) {
+  if (dayOffset === 0) return '同日';
+  if (dayOffset === 1) return '翌日';
+  if (dayOffset === -1) return '前日';
+  return dayOffset > 0 ? `${dayOffset}日後` : `${Math.abs(dayOffset)}日前`;
+}
+
+function setTimeCalcDetail(baseStr, operatorLabel, durationStr, resultStr) {
+  const detail = document.getElementById('timeCalcDetail');
+  detail.replaceChildren(
+    document.createTextNode(`計算: ${baseStr} ${operatorLabel} ${durationStr}`),
+    document.createElement('br'),
+    document.createTextNode(`結果: ${resultStr}`)
+  );
+}
+
+function calculateTimeOffset() {
+  const baseH = parseTimePart(document.getElementById('timeCalcH').value, 23);
+  const baseM = parseTimePart(document.getElementById('timeCalcM').value, 59);
+  const baseS = parseTimePart(document.getElementById('timeCalcS').value, 59);
+
+  if (baseH === null || baseM === null || baseS === null) {
+    showToast('時刻を24時間表記で入力してください', true);
+    return;
+  }
+
+  const diffH = parseDurationPart(document.getElementById('timeCalcDiffH').value, 999, true);
+  const diffM = parseDurationPart(document.getElementById('timeCalcDiffM').value, 59);
+  const diffS = parseDurationPart(document.getElementById('timeCalcDiffS').value, 59);
+
+  if (diffH === null || diffM === null || diffS === null) {
+    showToast('時間差を入力してください', true);
+    return;
+  }
+
+  if (diffH === 0 && diffM === 0 && diffS === 0) {
+    showToast('時間差を入力してください', true);
+    return;
+  }
+
+  const baseTotalSec = baseH * 3600 + baseM * 60 + baseS;
+  const diffTotalSec = diffH * 3600 + diffM * 60 + diffS;
+  const signedDiffSec = timeCalcOperator === 'sub' ? -diffTotalSec : diffTotalSec;
+  const rawResultSec = baseTotalSec + signedDiffSec;
+  const dayOffset = Math.floor(rawResultSec / 86400);
+  const normalizedSec = ((rawResultSec % 86400) + 86400) % 86400;
+  const resultH = Math.floor(normalizedSec / 3600);
+  const resultM = Math.floor((normalizedSec % 3600) / 60);
+  const resultS = normalizedSec % 60;
+  const resultStr = formatHms(resultH, resultM, resultS);
+  const dayLabel = describeDayOffset(dayOffset);
+  const dayNote = document.getElementById('timeCalcDayNote');
+
+  document.getElementById('timeCalcResultTime').textContent = resultStr;
+  dayNote.textContent = dayLabel;
+  dayNote.classList.toggle('shifted', dayOffset !== 0);
+  setTimeCalcDetail(
+    formatHms(baseH, baseM, baseS),
+    timeCalcOperator === 'sub' ? '-' : '+',
+    formatDuration(diffH, diffM, diffS),
+    `${dayLabel} ${resultStr}`
+  );
+  document.getElementById('timeCalcResultPanel').classList.add('visible');
 }
 
 // ===== Save Record =====
@@ -1749,19 +1939,26 @@ function showToast(msg, isError = false) {
   setTimeout(() => el.classList.remove('show'), 2500);
 }
 
-// ===== Auto-advance time inputs + 2-digit limit =====
-['camH', 'camM', 'camS'].forEach((id, idx, arr) => {
-  const el = document.getElementById(id);
-  el.addEventListener('input', function() {
-    this.value = this.value.replace(/\D/g, '');
-    if (this.value.length > 2) {
-      this.value = this.value.slice(0, 2);
-    }
-    if (this.value.length >= 2 && idx < arr.length - 1) {
-      document.getElementById(arr[idx + 1]).focus();
-    }
+// ===== Auto-advance time inputs + digit limits =====
+function attachNumericAutoAdvance(ids, limits) {
+  ids.forEach((id, idx, arr) => {
+    const el = document.getElementById(id);
+    el.addEventListener('input', function() {
+      const limit = limits[idx];
+      this.value = this.value.replace(/\D/g, '');
+      if (this.value.length > limit) {
+        this.value = this.value.slice(0, limit);
+      }
+      if (this.value.length >= limit && idx < arr.length - 1) {
+        document.getElementById(arr[idx + 1]).focus();
+      }
+    });
   });
-});
+}
+
+attachNumericAutoAdvance(['camH', 'camM', 'camS'], [2, 2, 2]);
+attachNumericAutoAdvance(['timeCalcH', 'timeCalcM', 'timeCalcS'], [2, 2, 2]);
+attachNumericAutoAdvance(['timeCalcDiffH', 'timeCalcDiffM', 'timeCalcDiffS'], [3, 2, 2]);
 
 // ===== Service Worker =====
 if ('serviceWorker' in navigator) {

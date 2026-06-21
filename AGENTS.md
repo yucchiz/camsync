@@ -6,6 +6,8 @@ CamSync is a mobile-first static web app for comparing a security camera's displ
 
 The app is intended to run fully client-side, including on GitHub Pages, and stores records in the browser's IndexedDB. It must not require a backend, account system, cloud database, analytics service, or third-party runtime to perform its core work.
 
+The app may also include small standalone utility screens, such as a time calculator. These utilities should stay separate from the main camera drift recording flow unless the user explicitly asks to connect them.
+
 ## Product Intent
 
 The app helps document the time offset of security camera footage. Important fields include:
@@ -18,6 +20,8 @@ The app helps document the time offset of security camera footage. Important fie
 - extraction date and time range
 - witness information
 - notes
+
+The time calculator is intended as a separate field utility for ad hoc time arithmetic, such as adding or subtracting a drift from a clock time or checking a duration. It should be usable on its own and should not automatically create, modify, or export drift records unless that behavior is explicitly requested.
 
 Treat these records as potentially sensitive. Camera locations, witness names, and notes may reveal private or operational information even though the app itself is static and public.
 
@@ -42,7 +46,7 @@ Treat these records as potentially sensitive. Camera locations, witness names, a
 - UI: inline HTML and CSS
 - Logic: inline vanilla JavaScript
 - Persistence: IndexedDB database `CamSyncDB`, object store `records`
-- Main screens: calculator, history, info
+- Main screens: calculator, time calculator, history, info
 
 ## Architecture Direction
 
