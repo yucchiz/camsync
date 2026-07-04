@@ -70,6 +70,35 @@ itself is static and public.
 - Persistence: IndexedDB database `CamSyncDB`, object store `records`
 - Main screens: calculator, time calculator, history, info
 
+### Code Map (`index.html`)
+
+All logic lives in one inline script (~2000 lines), organized in sections
+marked with `// =====` comments:
+
+- IndexedDB layer: `openDB`, `addRecord`, `getAllRecords`, `getRecord`,
+  `updateRecord`, `deleteRecord`, `clearAllRecords` (database `CamSyncDB`,
+  store `records`, keyPath `id` autoIncrement, `DB_VERSION`)
+- Drift calculator: `calculate` compares camera time vs. device clock;
+  `saveRecord` persists the result with metadata fields (location, viewDate,
+  extractDate/StartTime/EndTime, witnessName, witnessAge, notes)
+- Time calculator: `calculateTimeOffset` and its helpers (standalone utility,
+  independent of the record flow)
+- History UI: `renderHistory`, `initSwipeHandlers` (swipe to delete),
+  `openEditModal`/`saveEdit`, `escHtml`
+- Markdown export/import: `exportRecord`, `handleImportFile`, `parseMdRecord`
+  (`MAX_IMPORT_BYTES` limits import file size)
+
+## Markdown Record Format
+
+Export and import are coupled through exact Japanese label matching:
+`exportRecord` writes lines in the form `- **基準時刻:** 値`, and
+`parseMdRecord` re-imports them with regexes keyed on those exact labels
+(基準時刻, カメラ表示時刻, 誤差, 記録日時, カメラ設置場所, 閲覧日, 抽出日,
+立会人, 補足). Changing a label, value format, or line structure on one side
+silently breaks the other — and breaks re-import of files users have already
+exported. Always update both functions together and keep parsing compatible
+with previously exported records.
+
 ## Local Development & Verification
 
 There is no build step, package manager, or test runner. The app is a set of
