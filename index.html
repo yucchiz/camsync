@@ -811,35 +811,48 @@ html, body {
   background: rgba(34, 197, 94, 0.15);
 }
 
-/* ===== Extraction Time Group ===== */
-.extract-time-group {
+/* ===== Extraction Range Group ===== */
+.extract-range {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.extract-range-row {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.extract-time-group input[type="time"] {
-  flex: 1;
-  padding: 10px 12px;
+.extract-range-row .range-label {
+  width: 2em;
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.extract-range-row input[type="date"],
+.extract-range-row input[type="time"] {
+  width: auto;
+  min-width: 0;
+  padding: 10px 6px;
   background: var(--bg-input);
   border: 1px solid var(--border);
   border-radius: 10px;
   color: var(--text-primary);
   font-family: var(--font-mono);
-  font-size: 14px;
+  font-size: 13px;
+  text-align: center;
   outline: none;
   transition: border-color 0.2s;
   -webkit-appearance: none;
 }
 
-.extract-time-group input[type="time"]:focus {
-  border-color: var(--border-focus);
-}
+.extract-range-row input[type="date"] { flex: 1.2; }
+.extract-range-row input[type="time"] { flex: 1; }
 
-.extract-time-group .sep {
-  color: var(--text-muted);
-  font-size: 14px;
-  flex-shrink: 0;
+.extract-range-row input:focus {
+  border-color: var(--border-focus);
 }
 
 </style>
@@ -849,7 +862,7 @@ html, body {
 <div class="app">
   <header class="app-header">
     <div class="app-title">Cam<span>Sync</span></div>
-    <div style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">v2.1</div>
+    <div style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">v2.2</div>
   </header>
 
   <div class="app-body">
@@ -914,15 +927,18 @@ html, body {
             <input type="date" id="viewDate">
           </div>
           <div class="field">
-            <label>抽出日</label>
-            <input type="date" id="extractDate">
-          </div>
-          <div class="field">
-            <label>抽出時間帯</label>
-            <div class="extract-time-group">
-              <input type="time" id="extractStartTime" placeholder="開始">
-              <span class="sep">〜</span>
-              <input type="time" id="extractEndTime" placeholder="終了">
+            <label>抽出期間（終了日が空欄の場合は開始日と同日）</label>
+            <div class="extract-range">
+              <div class="extract-range-row">
+                <span class="range-label">開始</span>
+                <input type="date" id="extractDate">
+                <input type="time" id="extractStartTime">
+              </div>
+              <div class="extract-range-row">
+                <span class="range-label">終了</span>
+                <input type="date" id="extractEndDate">
+                <input type="time" id="extractEndTime">
+              </div>
             </div>
           </div>
           <div class="field">
@@ -1075,15 +1091,18 @@ html, body {
       <input type="date" id="editViewDate">
     </div>
     <div class="field">
-      <label>抽出日</label>
-      <input type="date" id="editExtractDate">
-    </div>
-    <div class="field">
-      <label>抽出時間帯</label>
-      <div class="extract-time-group">
-        <input type="time" id="editExtractStartTime" placeholder="開始">
-        <span class="sep">〜</span>
-        <input type="time" id="editExtractEndTime" placeholder="終了">
+      <label>抽出期間（終了日が空欄の場合は開始日と同日）</label>
+      <div class="extract-range">
+        <div class="extract-range-row">
+          <span class="range-label">開始</span>
+          <input type="date" id="editExtractDate">
+          <input type="time" id="editExtractStartTime">
+        </div>
+        <div class="extract-range-row">
+          <span class="range-label">終了</span>
+          <input type="date" id="editExtractEndDate">
+          <input type="time" id="editExtractEndTime">
+        </div>
       </div>
     </div>
     <div class="field">
@@ -1378,6 +1397,58 @@ function parseTimePart(value, max) {
   return parsed;
 }
 
+// ===== Extraction Range =====
+// 終了日が空欄の場合は開始日と同日として扱う。
+// 矛盾があればエラーメッセージ文字列を返し、問題なければ null を返す。
+function validateExtractRange(startDate, startTime, endDate, endTime) {
+  if (!startDate && endDate) {
+    return '終了日を入力する場合は開始日を入力してください';
+  }
+  if (!startDate) return null;
+  const effectiveEndDate = endDate || startDate;
+  if (effectiveEndDate < startDate) {
+    return '抽出終了が開始より前です';
+  }
+  if (startTime && endTime && effectiveEndDate === startDate && endTime < startTime) {
+    return endDate
+      ? '抽出終了が開始より前です'
+      : '抽出終了が開始より前です（深夜を跨ぐ場合は終了日を入力してください）';
+  }
+  return null;
+}
+
+// 開始日と同日の終了日は空文字に正規化して保存する（旧形式と互換の canonical 形）
+function normalizeExtractEndDate(startDate, endDate) {
+  return endDate === startDate ? '' : endDate;
+}
+
+function addDaysToDateStr(dateStr, days) {
+  const parts = dateStr.split('-').map(Number);
+  if (parts.length !== 3 || parts.some(Number.isNaN)) return dateStr;
+  return formatDateInput(new Date(parts[0], parts[1] - 1, parts[2] + days));
+}
+
+// 終了時刻 < 開始時刻（終了日未入力）の場合、終了日を自動で翌日に設定する
+function attachExtractRangeAssist(startDateId, startTimeId, endDateId, endTimeId) {
+  const startDateEl = document.getElementById(startDateId);
+  const startTimeEl = document.getElementById(startTimeId);
+  const endDateEl = document.getElementById(endDateId);
+  const endTimeEl = document.getElementById(endTimeId);
+
+  const maybeShiftEndDate = () => {
+    if (!startDateEl.value || endDateEl.value) return;
+    if (!startTimeEl.value || !endTimeEl.value) return;
+    if (endTimeEl.value < startTimeEl.value) {
+      endDateEl.value = addDaysToDateStr(startDateEl.value, 1);
+      showToast('終了日を翌日に設定しました');
+    }
+  };
+
+  startTimeEl.addEventListener('change', maybeShiftEndDate);
+  endTimeEl.addEventListener('change', maybeShiftEndDate);
+  startDateEl.addEventListener('change', maybeShiftEndDate);
+}
+
 // ===== Time Calculator =====
 function setTimeCalcOperator(operator) {
   timeCalcOperator = operator === 'sub' ? 'sub' : 'add';
@@ -1468,6 +1539,16 @@ function calculateTimeOffset() {
 async function saveRecord() {
   if (!lastCalcResult) return;
 
+  const extractDate = document.getElementById('extractDate').value;
+  const extractStartTime = document.getElementById('extractStartTime').value;
+  const extractEndDate = document.getElementById('extractEndDate').value;
+  const extractEndTime = document.getElementById('extractEndTime').value;
+  const rangeError = validateExtractRange(extractDate, extractStartTime, extractEndDate, extractEndTime);
+  if (rangeError) {
+    showToast(rangeError, true);
+    return;
+  }
+
   const record = {
     timestamp: Date.now(),
     refTime: lastCalcResult.refTime,
@@ -1477,9 +1558,10 @@ async function saveRecord() {
     displayVal: lastCalcResult.displayVal,
     location: document.getElementById('camLocation').value.trim(),
     viewDate: document.getElementById('viewDate').value,
-    extractDate: document.getElementById('extractDate').value,
-    extractStartTime: document.getElementById('extractStartTime').value,
-    extractEndTime: document.getElementById('extractEndTime').value,
+    extractDate: extractDate,
+    extractStartTime: extractStartTime,
+    extractEndDate: normalizeExtractEndDate(extractDate, extractEndDate),
+    extractEndTime: extractEndTime,
     witnessName: document.getElementById('witnessName').value.trim(),
     witnessAge: document.getElementById('witnessAge').value,
     notes: document.getElementById('notes').value.trim()
@@ -1503,6 +1585,7 @@ function resetForm() {
   document.getElementById('viewDate').value = '';
   document.getElementById('extractDate').value = '';
   document.getElementById('extractStartTime').value = '';
+  document.getElementById('extractEndDate').value = '';
   document.getElementById('extractEndTime').value = '';
   document.getElementById('witnessName').value = '';
   document.getElementById('witnessAge').value = '';
@@ -1565,7 +1648,7 @@ async function renderHistory() {
           <div class="history-meta">
             ${r.location ? `<strong>設置場所:</strong> ${escHtml(r.location)}<br>` : ''}
             ${r.viewDate ? `<strong>閲覧日:</strong> ${escHtml(r.viewDate)}<br>` : ''}
-            ${r.extractDate ? `<strong>抽出:</strong> ${escHtml(r.extractDate)}${r.extractStartTime ? ` ${escHtml(r.extractStartTime)}` : ''}${r.extractEndTime ? `〜${escHtml(r.extractEndTime)}` : ''}<br>` : ''}
+            ${r.extractDate ? `<strong>抽出:</strong> ${escHtml(r.extractDate)}${r.extractStartTime ? ` ${escHtml(r.extractStartTime)}` : ''}${(r.extractEndDate || r.extractEndTime) ? `〜${r.extractEndDate ? escHtml(r.extractEndDate) + (r.extractEndTime ? ' ' : '') : ''}${escHtml(r.extractEndTime || '')}` : ''}<br>` : ''}
             ${r.witnessName ? `<strong>立会人:</strong> ${escHtml(r.witnessName)}${r.witnessAge ? ` (${escHtml(r.witnessAge)}歳)` : ''}<br>` : ''}
             <strong>基準:</strong> ${escHtml(r.refTime)}　<strong>カメラ:</strong> ${escHtml(r.camTime)}
             ${r.notes ? `<br><strong>補足:</strong> ${escHtml(r.notes)}` : ''}
@@ -1710,6 +1793,7 @@ async function openEditModal(id) {
     document.getElementById('editViewDate').value = r.viewDate || '';
     document.getElementById('editExtractDate').value = r.extractDate || '';
     document.getElementById('editExtractStartTime').value = r.extractStartTime || '';
+    document.getElementById('editExtractEndDate').value = r.extractEndDate || '';
     document.getElementById('editExtractEndTime').value = r.extractEndTime || '';
     document.getElementById('editWitnessName').value = r.witnessName || '';
     document.getElementById('editWitnessAge').value = r.witnessAge || '';
@@ -1728,12 +1812,24 @@ function closeEditModal() {
 
 async function saveEdit() {
   if (editingRecordId === null) return;
+
+  const extractDate = document.getElementById('editExtractDate').value;
+  const extractStartTime = document.getElementById('editExtractStartTime').value;
+  const extractEndDate = document.getElementById('editExtractEndDate').value;
+  const extractEndTime = document.getElementById('editExtractEndTime').value;
+  const rangeError = validateExtractRange(extractDate, extractStartTime, extractEndDate, extractEndTime);
+  if (rangeError) {
+    showToast(rangeError, true);
+    return;
+  }
+
   const data = {
     location: document.getElementById('editLocation').value.trim(),
     viewDate: document.getElementById('editViewDate').value,
-    extractDate: document.getElementById('editExtractDate').value,
-    extractStartTime: document.getElementById('editExtractStartTime').value,
-    extractEndTime: document.getElementById('editExtractEndTime').value,
+    extractDate: extractDate,
+    extractStartTime: extractStartTime,
+    extractEndDate: normalizeExtractEndDate(extractDate, extractEndDate),
+    extractEndTime: extractEndTime,
     witnessName: document.getElementById('editWitnessName').value.trim(),
     witnessAge: document.getElementById('editWitnessAge').value,
     notes: document.getElementById('editNotes').value.trim()
@@ -1777,7 +1873,12 @@ async function exportRecord(id) {
     if (r.extractDate) {
       let ext = `- **抽出日:** ${normalizeMarkdownValue(r.extractDate)}`;
       if (r.extractStartTime) ext += ` ${normalizeMarkdownValue(r.extractStartTime)}`;
-      if (r.extractEndTime) ext += `〜${normalizeMarkdownValue(r.extractEndTime)}`;
+      if (r.extractEndDate && r.extractEndDate !== r.extractDate) {
+        ext += `〜${normalizeMarkdownValue(r.extractEndDate)}`;
+        if (r.extractEndTime) ext += ` ${normalizeMarkdownValue(r.extractEndTime)}`;
+      } else if (r.extractEndTime) {
+        ext += `〜${normalizeMarkdownValue(r.extractEndTime)}`;
+      }
       md += ext + `\n`;
     }
     if (r.witnessName) {
@@ -1869,14 +1970,25 @@ function parseMdRecord(md) {
   }
 
   // Parse extract date/time
-  let extractDate = '', extractStartTime = '', extractEndTime = '';
+  // 旧形式: DATE / DATE HH:MM / DATE HH:MM〜HH:MM
+  // 新形式（日跨ぎ）: DATE HH:MM〜DATE HH:MM / DATE〜DATE
+  let extractDate = '', extractStartTime = '', extractEndDate = '', extractEndTime = '';
   const extStr = extract('抽出日');
   if (extStr) {
-    const extMatch = extStr.match(/^(\d{4}-\d{2}-\d{2})(?:\s+(\d{2}:\d{2}))?(?:〜(\d{2}:\d{2}))?/);
+    const extMatch = extStr.match(/^(\d{4}-\d{2}-\d{2})(?:\s+(\d{2}:\d{2}))?(?:〜(\d{4}-\d{2}-\d{2})?\s*(\d{2}:\d{2})?)?$/);
     if (extMatch) {
       extractDate = extMatch[1] || '';
       extractStartTime = extMatch[2] || '';
-      extractEndTime = extMatch[3] || '';
+      extractEndDate = extMatch[3] || '';
+      extractEndTime = extMatch[4] || '';
+      if (extractEndDate === extractDate) extractEndDate = '';
+      if (extractEndDate && extractEndDate < extractDate) {
+        // 終了日が開始日より前の矛盾した範囲は取り込まない（レコード自体は取り込む）
+        extractDate = '';
+        extractStartTime = '';
+        extractEndDate = '';
+        extractEndTime = '';
+      }
     }
   }
 
@@ -1902,6 +2014,7 @@ function parseMdRecord(md) {
     viewDate: extract('閲覧日'),
     extractDate,
     extractStartTime,
+    extractEndDate,
     extractEndTime,
     witnessName,
     witnessAge,
@@ -1959,6 +2072,9 @@ function attachNumericAutoAdvance(ids, limits) {
 attachNumericAutoAdvance(['camH', 'camM', 'camS'], [2, 2, 2]);
 attachNumericAutoAdvance(['timeCalcH', 'timeCalcM', 'timeCalcS'], [2, 2, 2]);
 attachNumericAutoAdvance(['timeCalcDiffH', 'timeCalcDiffM', 'timeCalcDiffS'], [3, 2, 2]);
+
+attachExtractRangeAssist('extractDate', 'extractStartTime', 'extractEndDate', 'extractEndTime');
+attachExtractRangeAssist('editExtractDate', 'editExtractStartTime', 'editExtractEndDate', 'editExtractEndTime');
 
 // ===== Service Worker =====
 if ('serviceWorker' in navigator) {

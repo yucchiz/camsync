@@ -107,8 +107,8 @@ static files opened directly in a browser.
 - Preview locally by serving the directory over HTTP (needed so the service
   worker and IndexedDB behave like production), for example:
   - `python3 -m http.server 8000` then open `http://localhost:8000/`
-- Service worker note: `sw.js` uses cache name `camsync-v2` and caches the app
-  shell. When editing cached assets or the worker itself, bump `CACHE_NAME` so
+- Service worker note: `sw.js` uses a versioned cache name (currently
+  `camsync-v3`) and caches the app shell. When editing cached assets or the worker itself, bump `CACHE_NAME` so
   clients pick up the change, and hard-reload (or unregister the worker) while
   testing so you are not served a stale cache.
 - If browser verification is not possible in the current environment, say so
