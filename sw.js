@@ -1,4 +1,4 @@
-const CACHE_NAME = 'camsync-v4';
+const CACHE_NAME = 'camsync-v5';
 const APP_SHELL = [
   './',
   './index.html',
