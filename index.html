@@ -833,7 +833,7 @@ html, body {
 
 .extract-range-row input[type="date"],
 .extract-range-row input[type="time"] {
-  width: auto;
+  width: 100%;
   min-width: 0;
   padding: 10px 6px;
   background: var(--bg-input);
@@ -848,8 +848,32 @@ html, body {
   -webkit-appearance: none;
 }
 
-.extract-range-row input[type="date"] { flex: 1.2; }
-.extract-range-row input[type="time"] { flex: 1; }
+/* Faint hint showing which window is the date and which is the time */
+.extract-range-row .field-hint {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+.extract-range-row .field-hint.date { flex: 1.2; }
+.extract-range-row .field-hint.time { flex: 1; }
+
+.extract-range-row .field-hint::after {
+  content: attr(data-hint);
+  position: absolute;
+  top: 3px;
+  right: 5px;
+  font-size: 9px;
+  line-height: 1;
+  color: var(--text-muted);
+  opacity: 0.5;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+
+.extract-range-row .field-hint.filled::after,
+.extract-range-row .field-hint:focus-within::after {
+  opacity: 0;
+}
 
 .extract-range-row input:focus {
   border-color: var(--border-focus);
@@ -862,7 +886,7 @@ html, body {
 <div class="app">
   <header class="app-header">
     <div class="app-title">Cam<span>Sync</span></div>
-    <div style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">v2.3</div>
+    <div style="font-size:11px;color:var(--text-muted);font-family:var(--font-mono);">v2.4</div>
   </header>
 
   <div class="app-body">
@@ -931,13 +955,13 @@ html, body {
             <div class="extract-range">
               <div class="extract-range-row">
                 <span class="range-label">開始</span>
-                <input type="date" id="extractDate">
-                <input type="time" id="extractStartTime">
+                <span class="field-hint date" data-hint="日付"><input type="date" id="extractDate"></span>
+                <span class="field-hint time" data-hint="時間"><input type="time" id="extractStartTime"></span>
               </div>
               <div class="extract-range-row">
                 <span class="range-label">終了</span>
-                <input type="date" id="extractEndDate">
-                <input type="time" id="extractEndTime">
+                <span class="field-hint date" data-hint="日付"><input type="date" id="extractEndDate"></span>
+                <span class="field-hint time" data-hint="時間"><input type="time" id="extractEndTime"></span>
               </div>
             </div>
           </div>
@@ -1095,13 +1119,13 @@ html, body {
       <div class="extract-range">
         <div class="extract-range-row">
           <span class="range-label">開始</span>
-          <input type="date" id="editExtractDate">
-          <input type="time" id="editExtractStartTime">
+          <span class="field-hint date" data-hint="日付"><input type="date" id="editExtractDate"></span>
+          <span class="field-hint time" data-hint="時間"><input type="time" id="editExtractStartTime"></span>
         </div>
         <div class="extract-range-row">
           <span class="range-label">終了</span>
-          <input type="date" id="editExtractEndDate">
-          <input type="time" id="editExtractEndTime">
+          <span class="field-hint date" data-hint="日付"><input type="date" id="editExtractEndDate"></span>
+          <span class="field-hint time" data-hint="時間"><input type="time" id="editExtractEndTime"></span>
         </div>
       </div>
     </div>
@@ -1449,6 +1473,23 @@ function attachExtractRangeAssist(startDateId, startTimeId, endDateId, endTimeId
   startDateEl.addEventListener('change', maybeShiftEndDate);
 }
 
+// ===== Faint date/time hints on extract-range inputs =====
+// Show the hint only while the window is empty and unfocused.
+function syncFieldHints() {
+  document.querySelectorAll('.field-hint > input').forEach((inp) => {
+    inp.closest('.field-hint').classList.toggle('filled', inp.value !== '');
+  });
+}
+
+function bindFieldHints() {
+  document.querySelectorAll('.field-hint > input').forEach((inp) => {
+    const sync = () => inp.closest('.field-hint').classList.toggle('filled', inp.value !== '');
+    inp.addEventListener('input', sync);
+    inp.addEventListener('change', sync);
+    sync();
+  });
+}
+
 // ===== Time Calculator =====
 function setTimeCalcOperator(operator) {
   timeCalcOperator = operator === 'sub' ? 'sub' : 'add';
@@ -1590,6 +1631,7 @@ function resetForm() {
   document.getElementById('witnessName').value = '';
   document.getElementById('witnessAge').value = '';
   document.getElementById('notes').value = '';
+  syncFieldHints();
 }
 
 // ===== History Rendering =====
@@ -1798,6 +1840,7 @@ async function openEditModal(id) {
     document.getElementById('editWitnessName').value = r.witnessName || '';
     document.getElementById('editWitnessAge').value = r.witnessAge || '';
     document.getElementById('editNotes').value = r.notes || '';
+    syncFieldHints();
 
     document.getElementById('editOverlay').classList.add('visible');
   } catch (e) {
@@ -2075,6 +2118,8 @@ attachNumericAutoAdvance(['timeCalcDiffH', 'timeCalcDiffM', 'timeCalcDiffS'], [3
 
 attachExtractRangeAssist('extractDate', 'extractStartTime', 'extractEndDate', 'extractEndTime');
 attachExtractRangeAssist('editExtractDate', 'editExtractStartTime', 'editExtractEndDate', 'editExtractEndTime');
+
+bindFieldHints();
 
 // ===== Service Worker =====
 if ('serviceWorker' in navigator) {
