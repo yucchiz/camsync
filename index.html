@@ -2123,7 +2123,22 @@ bindFieldHints();
 
 // ===== Service Worker =====
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch((error) => {
+  // 新しい Service Worker が制御を引き継いだら一度だけ再読み込みして最新版を表示する。
+  let hasReloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (hasReloaded) return;
+    hasReloaded = true;
+    window.location.reload();
+  });
+
+  navigator.serviceWorker.register('sw.js').then((registration) => {
+    // 起動時に毎回更新を確認する（iOS の standalone PWA でも新しい sw.js を検知させる）。
+    registration.update();
+    // アプリを前面に戻したタイミングでも更新を確認する。
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') registration.update();
+    });
+  }).catch((error) => {
     console.warn('Service worker registration failed:', error);
   });
 }
