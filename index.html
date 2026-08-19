@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -7,13 +8,15 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#0a0e17">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="stylesheet" href="styles.css">
   <title>CamSync</title>
 </head>
+
 <body>
   <div class="app" id="appRoot">
     <header class="app-header">
@@ -145,13 +148,16 @@
             <legend>時間差</legend>
             <div class="time-input-group">
               <label class="sr-only" for="timeCalcDiffH">時間差の時</label>
-              <input type="text" id="timeCalcDiffH" placeholder="HH" inputmode="numeric" maxlength="3" autocomplete="off">
+              <input type="text" id="timeCalcDiffH" placeholder="HH" inputmode="numeric" maxlength="3"
+                autocomplete="off">
               <span aria-hidden="true">:</span>
               <label class="sr-only" for="timeCalcDiffM">時間差の分</label>
-              <input type="text" id="timeCalcDiffM" placeholder="MM" inputmode="numeric" maxlength="2" autocomplete="off">
+              <input type="text" id="timeCalcDiffM" placeholder="MM" inputmode="numeric" maxlength="2"
+                autocomplete="off">
               <span aria-hidden="true">:</span>
               <label class="sr-only" for="timeCalcDiffS">時間差の秒</label>
-              <input type="text" id="timeCalcDiffS" placeholder="SS" inputmode="numeric" maxlength="2" autocomplete="off">
+              <input type="text" id="timeCalcDiffS" placeholder="SS" inputmode="numeric" maxlength="2"
+                autocomplete="off">
             </div>
           </fieldset>
         </section>
@@ -193,10 +199,14 @@
     </main>
 
     <nav class="tab-bar" role="tablist" aria-label="画面切替">
-      <button type="button" id="tab-calc" class="tab-item active" role="tab" aria-selected="true" aria-controls="screen-calc" tabindex="0" data-screen="calc">計算</button>
-      <button type="button" id="tab-timecalc" class="tab-item" role="tab" aria-selected="false" aria-controls="screen-timecalc" tabindex="-1" data-screen="timecalc">時間電卓</button>
-      <button type="button" id="tab-history" class="tab-item" role="tab" aria-selected="false" aria-controls="screen-history" tabindex="-1" data-screen="history">履歴</button>
-      <button type="button" id="tab-info" class="tab-item" role="tab" aria-selected="false" aria-controls="screen-info" tabindex="-1" data-screen="info">情報</button>
+      <button type="button" id="tab-calc" class="tab-item active" role="tab" aria-selected="true"
+        aria-controls="screen-calc" tabindex="0" data-screen="calc">計算</button>
+      <button type="button" id="tab-timecalc" class="tab-item" role="tab" aria-selected="false"
+        aria-controls="screen-timecalc" tabindex="-1" data-screen="timecalc">時間電卓</button>
+      <button type="button" id="tab-history" class="tab-item" role="tab" aria-selected="false"
+        aria-controls="screen-history" tabindex="-1" data-screen="history">履歴</button>
+      <button type="button" id="tab-info" class="tab-item" role="tab" aria-selected="false" aria-controls="screen-info"
+        tabindex="-1" data-screen="info">情報</button>
     </nav>
   </div>
 
@@ -274,4 +284,5 @@
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
   <script type="module" src="app.mjs"></script>
 </body>
+
 </html>
