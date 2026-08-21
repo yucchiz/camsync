@@ -22,18 +22,40 @@ import {
 } from './lib/storage.mjs';
 import {
   MAX_BACKUP_BYTES,
+  assessBackupCapacity,
   createBackup,
   createDuplicatePlan,
   createRestorePlan,
+  estimateSerializedBackupBytes,
   parseBackup,
   serializeBackup,
 } from './lib/backup.mjs';
 
-const APP_VERSION = '2.6.0';
+const APP_VERSION = '2.7.0';
 const DIRECTION_LABELS = {
   ahead: 'カメラ時刻が進んでいます',
   behind: 'カメラ時刻が遅れています',
   exact: '時刻は正確です',
+};
+const HISTORY_COUNT_FORMATTER = new Intl.NumberFormat('ja-JP');
+const BACKUP_MIB_FORMATTER = new Intl.NumberFormat('ja-JP', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+const CAPACITY_STATE_MESSAGES = {
+  warning: '上限に近づいています',
+  limit: '上限に達しています',
+  over: '上限を超えています',
+};
+const CAPACITY_LEVEL_LABELS = {
+  warning: '注意',
+  limit: '上限',
+  over: '上限超過',
+};
+const CAPACITY_LEVEL_ACTIONS = {
+  warning: '早めに全件バックアップし、不要な履歴を整理してください。',
+  limit: 'これ以上増える前に全件バックアップし、不要な履歴を整理してください。',
+  over: '全件バックアップまたは復元ができない可能性があります。重要な記録を個別にMD出力してから、不要な履歴を整理してください。',
 };
 const el = (id) => document.getElementById(id);
 
@@ -317,11 +339,66 @@ function makeButton(label, className, onClick) {
   return button;
 }
 
+function formatRecordCount(value) {
+  return `${HISTORY_COUNT_FORMATTER.format(value)}件`;
+}
+
+function formatBackupMib(value) {
+  const hundredths = Math.floor((value * 100) / 1024 / 1024);
+  return `${BACKUP_MIB_FORMATTER.format(hundredths / 100)} MiB`;
+}
+
+function capacityReason(label, state) {
+  const message = CAPACITY_STATE_MESSAGES[state];
+  return message ? `${label}が${message}` : '';
+}
+
+function renderHistoryCapacityState(capacity) {
+  const warning = el('historyCapacityWarning');
+  const reasons = [
+    capacityReason('件数', capacity.records.state),
+    capacityReason('推定容量', capacity.bytes.state),
+  ].filter(Boolean);
+  const levelLabel = CAPACITY_LEVEL_LABELS[capacity.level];
+  const levelAction = CAPACITY_LEVEL_ACTIONS[capacity.level];
+
+  warning.className = 'history-capacity-warning';
+  if (!levelLabel || !levelAction || reasons.length === 0) {
+    warning.textContent = '';
+    warning.hidden = true;
+    return;
+  }
+
+  warning.classList.add(`level-${capacity.level}`);
+  warning.hidden = false;
+  warning.textContent = `${levelLabel}：復元可能な全件バックアップの${reasons.join('。')}。${levelAction}`;
+}
+
+function updateHistoryCapacity(records) {
+  const count = records.length;
+  const formattedCount = formatRecordCount(count);
+  try {
+    const backupBytes = estimateSerializedBackupBytes(records, {
+      appVersion: APP_VERSION,
+      exportedAt: new Date().toISOString(),
+    });
+    const capacity = assessBackupCapacity({ recordCount: count, backupBytes });
+    el('historyCapacitySummary').textContent = `保存済み：${formattedCount} / ${formatRecordCount(capacity.records.max)} ／ 推定バックアップ容量：${formatBackupMib(backupBytes)} / ${formatBackupMib(capacity.bytes.max)}`;
+    renderHistoryCapacityState(capacity);
+  } catch (error) {
+    console.error('推定バックアップ容量を算出できません', error);
+    const capacity = assessBackupCapacity({ recordCount: count, backupBytes: 0 });
+    el('historyCapacitySummary').textContent = `保存済み：${formattedCount} / ${formatRecordCount(capacity.records.max)} ／ 推定容量を算出できません`;
+    renderHistoryCapacityState(capacity);
+  }
+}
+
 async function renderHistory() {
   const list = el('historyList');
   list.replaceChildren();
   try {
     const records = await getAllRecords();
+    updateHistoryCapacity(records);
     el('clearAllBtn').hidden = records.length === 0;
     if (records.length === 0) {
       const empty = document.createElement('p');

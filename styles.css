@@ -229,7 +229,28 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 }
 .timecalc-day-note.shifted { background: #3b2b0e; color: var(--accent-amber); }
 
-.history-toolbar { display: grid; gap: 8px; margin: 12px 0 18px; }
+.history-capacity {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-card);
+}
+.history-capacity-title { margin: 0 0 4px; color: var(--text-secondary); font-size: 13px; }
+.history-capacity-summary { margin: 0; color: var(--text-primary); font: 12px/1.6 var(--font-mono); }
+.history-capacity-warning {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.history-capacity-warning.level-warning { background: #3b2b0e; color: var(--accent-amber); }
+.history-capacity-warning.level-limit,
+.history-capacity-warning.level-over { background: #3f171c; color: var(--accent-red); }
+.history-capacity-note { margin: 6px 0 0; color: var(--text-muted); font-size: 11px; }
+.history-toolbar { display: grid; gap: 8px; margin: 0 0 18px; }
 .toolbar-btn, .secondary-btn, .primary-small-btn, .danger-outline-btn {
   padding: 10px 12px;
   border-radius: 10px;

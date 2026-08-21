@@ -173,6 +173,13 @@
       <section id="screen-history" class="screen" role="tabpanel" aria-labelledby="tab-history" hidden>
         <input type="file" id="importFileInput" accept=".md,text/markdown" hidden>
         <input type="file" id="restoreFileInput" accept=".json,application/json" hidden>
+        <section class="history-capacity" aria-labelledby="historyCapacityTitle">
+          <h2 id="historyCapacityTitle" class="history-capacity-title">履歴の保存状況</h2>
+          <p id="historyCapacitySummary" class="history-capacity-summary">保存済み：0件 / 10,000件 ／ 推定バックアップ容量：0.00 MiB / 10.00 MiB</p>
+          <p id="historyCapacityWarning" class="history-capacity-warning" role="status" aria-live="polite"
+            aria-atomic="true" hidden></p>
+          <p class="history-capacity-note">復元可能な全件バックアップの上限に対する目安です。端末の保存容量上限ではありません。</p>
+        </section>
         <div class="history-toolbar" aria-label="履歴の入出力">
           <button type="button" class="toolbar-btn" id="importMarkdownBtn">MDインポート</button>
           <button type="button" class="toolbar-btn" id="backupAllBtn">全件バックアップ</button>

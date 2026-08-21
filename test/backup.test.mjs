@@ -4,10 +4,15 @@ import test from 'node:test';
 import {
   BACKUP_FORMAT,
   BACKUP_FORMAT_VERSION,
+  BACKUP_WARNING_RATIO,
+  MAX_BACKUP_BYTES,
+  MAX_BACKUP_RECORDS,
   BackupError,
+  assessBackupCapacity,
   createBackup,
   createDuplicatePlan,
   createRestorePlan,
+  estimateSerializedBackupBytes,
   parseBackup,
   serializeBackup,
 } from '../lib/backup.mjs';
@@ -176,4 +181,120 @@ test('全件バックアップはiOSの秒付き抽出時刻を分に正規化�
   assert.equal(parsed.records[0].extractEndTime, '00:10');
   assert.equal(parsed.records[0].id, 7);
   assert.equal(parsed.records[0].timestamp, 1_786_406_445_678);
+});
+
+test('バックアップ容量判定は件数の80%・上限・超過境界を区別する', () => {
+  assert.equal(BACKUP_WARNING_RATIO, 0.8);
+
+  const expectations = [
+    [7_999, 'normal'],
+    [8_000, 'warning'],
+    [9_999, 'warning'],
+    [10_000, 'limit'],
+    [10_001, 'over'],
+  ];
+  for (const [recordCount, state] of expectations) {
+    const capacity = assessBackupCapacity({ recordCount, backupBytes: 0 });
+    assert.equal(capacity.level, state);
+    assert.deepEqual(capacity.records, {
+      current: recordCount,
+      max: MAX_BACKUP_RECORDS,
+      warningAt: 8_000,
+      state,
+    });
+    assert.equal(capacity.bytes.state, 'normal');
+  }
+});
+
+test('バックアップ容量判定はUTF-8バイト数の80%・上限・超過境界を区別する', () => {
+  const warningAt = MAX_BACKUP_BYTES * BACKUP_WARNING_RATIO;
+  const expectations = [
+    [warningAt - 1, 'normal'],
+    [warningAt, 'warning'],
+    [MAX_BACKUP_BYTES - 1, 'warning'],
+    [MAX_BACKUP_BYTES, 'limit'],
+    [MAX_BACKUP_BYTES + 1, 'over'],
+  ];
+  for (const [backupBytes, state] of expectations) {
+    const capacity = assessBackupCapacity({ recordCount: 0, backupBytes });
+    assert.equal(capacity.level, state);
+    assert.deepEqual(capacity.bytes, {
+      current: backupBytes,
+      max: MAX_BACKUP_BYTES,
+      warningAt,
+      state,
+    });
+    assert.equal(capacity.records.state, 'normal');
+  }
+});
+
+test('バックアップ容量判定の全体levelは件数と容量の深刻な方を採用する', () => {
+  const capacity = assessBackupCapacity(
+    { recordCount: 8, backupBytes: 11 },
+    { maxRecords: 10, maxBytes: 10, warningRatio: 0.8 },
+  );
+
+  assert.equal(capacity.level, 'over');
+  assert.equal(capacity.records.state, 'warning');
+  assert.equal(capacity.bytes.state, 'over');
+});
+
+test('バックアップ容量判定は不正な値とオプションを拒否する', () => {
+  const invalidCases = [
+    [{ recordCount: -1, backupBytes: 0 }, undefined],
+    [{ recordCount: 0.5, backupBytes: 0 }, undefined],
+    [{ recordCount: 0, backupBytes: Number.NaN }, undefined],
+    [{ recordCount: 0, backupBytes: 0 }, { maxRecords: 0 }],
+    [{ recordCount: 0, backupBytes: 0 }, { maxBytes: -1 }],
+    [{ recordCount: 0, backupBytes: 0 }, { warningRatio: 0 }],
+    [{ recordCount: 0, backupBytes: 0 }, { warningRatio: 1.01 }],
+  ];
+
+  for (const [values, options] of invalidCases) {
+    assert.throws(() => assessBackupCapacity(values, options), TypeError);
+  }
+});
+
+test('推定バイト数は空配列と日本語を含む記録をUTF-8で数える', () => {
+  const options = {
+    appVersion: '1.0.0',
+    exportedAt: '2026-08-11T06:00:00.000Z',
+  };
+  const emptyBytes = estimateSerializedBackupBytes([], options);
+  const asciiBytes = estimateSerializedBackupBytes([
+    makeRecord({ location: 'aaa', witnessName: '', notes: '' }),
+  ], options);
+  const japaneseBytes = estimateSerializedBackupBytes([
+    makeRecord({ location: '倉庫', witnessName: '', notes: '' }),
+  ], options);
+
+  assert.ok(emptyBytes > 0);
+  assert.equal(japaneseBytes - asciiBytes, 3);
+});
+
+test('推定バイト数は固定長digestを含む実バックアップ出力と一致する', async () => {
+  const records = [makeRecord(), makeRecord({ id: 8, notes: '日本語\n複数行' })];
+  const options = {
+    appVersion: '1.0.0',
+    exportedAt: '2026-08-11T06:00:00.000Z',
+  };
+  const backup = await createBackup(records, options);
+  const actualBytes = new TextEncoder().encode(serializeBackup(backup)).byteLength;
+
+  assert.equal(estimateSerializedBackupBytes(records, options), actualBytes);
+});
+
+test('推定バイト数はバックアップ件数上限を超えた履歴でも算出できる', () => {
+  const records = Array.from(
+    { length: MAX_BACKUP_RECORDS + 1 },
+    (_, index) => makeRecord({ id: index + 1 }),
+  );
+
+  const bytes = estimateSerializedBackupBytes(records, {
+    appVersion: '1.0.0',
+    exportedAt: '2026-08-11T06:00:00.000Z',
+  });
+
+  assert.ok(Number.isSafeInteger(bytes));
+  assert.ok(bytes > 0);
 });
