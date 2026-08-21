@@ -84,6 +84,15 @@ function firstErrorMessage(result, fallback) {
   return result?.errors?.[0]?.message || fallback;
 }
 
+function formatCaughtError(error, fallback) {
+  const nested = error?.details?.errors?.[0]?.message;
+  const message = typeof error?.message === 'string' ? error.message : '';
+  if (message && nested && !message.includes(nested)) {
+    return `${message}（${nested}）`;
+  }
+  return message || fallback;
+}
+
 function setDirty(value = true) {
   isDirty = value;
 }
@@ -544,7 +553,7 @@ async function backupAllRecords() {
     showToast(`${records.length}件をバックアップしました`);
   } catch (error) {
     console.error(error);
-    showToast(error.message || 'バックアップに失敗しました', true);
+    showToast(formatCaughtError(error, 'バックアップに失敗しました'), true);
   }
 }
 
@@ -560,7 +569,7 @@ async function prepareRestore(file) {
     el('restoreCancelBtn').focus();
   } catch (error) {
     console.error(error);
-    showToast(error.message || 'バックアップを読み取れません', true);
+    showToast(formatCaughtError(error, 'バックアップを読み取れません'), true);
   }
 }
 

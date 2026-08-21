@@ -88,3 +88,75 @@ test('normalizeExtractRange keeps the historical same-day canonical shape', () =
     endTime: '11:00'
   });
 });
+
+test('normalizeExtractRange strips iOS HH:MM:SS to minute precision and keeps same-day endDate empty', () => {
+  assert.deepEqual(normalizeExtractRange({
+    startDate: '2026-08-11',
+    startTime: '10:00:00',
+    endDate: '2026-08-11',
+    endTime: '11:00:00'
+  }), {
+    startDate: '2026-08-11',
+    startTime: '10:00',
+    endDate: '',
+    endTime: '11:00'
+  });
+});
+
+test('normalizeExtractRange strips fractional seconds to HH:MM', () => {
+  assert.deepEqual(normalizeExtractRange({
+    startDate: '2026-08-11',
+    startTime: '10:00:00.000',
+    endDate: '',
+    endTime: '11:00:00.000'
+  }), {
+    startDate: '2026-08-11',
+    startTime: '10:00',
+    endDate: '',
+    endTime: '11:00'
+  });
+});
+
+test('validateExtractRange accepts overnight iOS times after minute normalization', () => {
+  const result = validateExtractRange({
+    startDate: '2026-08-11',
+    startTime: '23:50:00',
+    endDate: '2026-08-12',
+    endTime: '00:10:00'
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.value.startTime, '23:50');
+  assert.equal(result.value.endTime, '00:10');
+});
+
+test('validateExtractRange rejects invalid seconds and non-time strings', () => {
+  const invalidSeconds = validateExtractRange({
+    startDate: '2026-08-11',
+    startTime: '10:00:60',
+    endDate: '',
+    endTime: '11:00'
+  });
+  assert.equal(invalidSeconds.ok, false);
+  assert.equal(invalidSeconds.errors[0].code, 'invalid_minute_time');
+
+  const invalidFormat = validateExtractRange({
+    startDate: '2026-08-11',
+    startTime: '10:00:xx',
+    endDate: '',
+    endTime: '11:00'
+  });
+  assert.equal(invalidFormat.ok, false);
+  assert.equal(invalidFormat.errors[0].code, 'invalid_minute_time');
+});
+
+test('validateExtractRange still accepts existing HH:MM extract times', () => {
+  const result = validateExtractRange({
+    startDate: '2026-08-11',
+    startTime: '10:00',
+    endDate: '',
+    endTime: '11:00'
+  });
+  assert.equal(result.ok, true);
+  assert.equal(result.value.startTime, '10:00');
+  assert.equal(result.value.endTime, '11:00');
+});

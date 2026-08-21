@@ -159,3 +159,21 @@ test('追加復元は既存・入力内重複を除き、置換復元は全件�
   assert.deepEqual(replace.records, [duplicate, fresh]);
   assert.equal(replace.duplicates.length, 0);
 });
+
+test('全件バックアップはiOSの秒付き抽出時刻を分に正規化して通す', async () => {
+  const backup = await createBackup([makeRecord({ extractStartTime: '23:50:00', extractEndTime: '00:10:00' })], {
+    appVersion: '1.0.0',
+    exportedAt: '2026-08-11T06:00:00.000Z',
+  });
+
+  assert.equal(backup.records[0].extractStartTime, '23:50');
+  assert.equal(backup.records[0].extractEndTime, '00:10');
+  assert.equal(backup.records[0].id, 7);
+  assert.equal(backup.records[0].timestamp, 1_786_406_445_678);
+
+  const parsed = await parseBackup(serializeBackup(backup));
+  assert.equal(parsed.records[0].extractStartTime, '23:50');
+  assert.equal(parsed.records[0].extractEndTime, '00:10');
+  assert.equal(parsed.records[0].id, 7);
+  assert.equal(parsed.records[0].timestamp, 1_786_406_445_678);
+});

@@ -74,3 +74,14 @@ test('validateRecord preserves a valid IndexedDB id only when requested', () => 
   assert.equal(result.value.id, 7);
   assert.equal(validateRecord(validRecord({ id: -1 }), { allowId: true }).errors[0].code, 'invalid_id');
 });
+
+test('validateRecord accepts iOS second-precision extract times and canonicalizes to minutes', () => {
+  const result = validateRecord(validRecord({
+    extractStartTime: '23:50:00',
+    extractEndTime: '00:10:00',
+    extractEndDate: '2026-08-12'
+  }));
+  assert.equal(result.ok, true);
+  assert.equal(result.value.extractStartTime, '23:50');
+  assert.equal(result.value.extractEndTime, '00:10');
+});
