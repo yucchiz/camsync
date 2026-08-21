@@ -29,7 +29,7 @@ import {
   serializeBackup,
 } from './lib/backup.mjs';
 
-const APP_VERSION = '2.5.0';
+const APP_VERSION = '2.6.0';
 const DIRECTION_LABELS = {
   ahead: 'カメラ時刻が進んでいます',
   behind: 'カメラ時刻が遅れています',
