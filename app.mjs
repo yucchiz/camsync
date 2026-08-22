@@ -298,6 +298,7 @@ function switchScreen(name, { focus = false } = {}) {
     if (selected && focus) tab.focus();
   });
   if (name === 'history') renderHistory();
+  el('appBody').scrollTop = 0;
 }
 
 function handleTabKey(event) {

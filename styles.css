@@ -30,7 +30,7 @@ body {
   color: var(--text-primary);
   font-family: var(--font-sans);
   line-height: 1.5;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 button, input, textarea { font: inherit; }
 button { min-height: 44px; }
@@ -76,11 +76,12 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 .app-version { color: var(--text-muted); font: 12px var(--font-mono); }
 .app-body {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding-bottom: calc(78px + var(--safe-bottom));
   -webkit-overflow-scrolling: touch;
 }
 .screen { padding: 0 20px 24px; }
+#screen-info { padding-top: 16px; }
 
 .update-banner {
   margin: 0 16px 10px;
@@ -284,16 +285,13 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
 .history-actions .delete-btn { color: var(--accent-red); }
 
 .tab-bar {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
   z-index: 20;
   display: grid;
+  flex: 0 0 auto;
   grid-template-columns: repeat(4, 1fr);
   width: 100%;
   max-width: 480px;
   padding: 7px 4px calc(7px + var(--safe-bottom));
-  transform: translateX(-50%);
   border-top: 1px solid var(--border);
   background: rgba(17, 24, 39, 0.97);
 }
