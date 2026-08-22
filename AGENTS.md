@@ -1,52 +1,52 @@
-# Repository Guidelines
+# リポジトリガイドライン
 
-## Project Summary & Product Intent
+## プロジェクト概要と製品意図
 
-CamSync is a dependency-free, mobile-first static PWA for comparing a security camera's displayed time with the device clock and recording the drift. It runs fully client-side, including on GitHub Pages, and stores records in browser IndexedDB. Core operation must not require a backend, account, cloud database, analytics service, or third-party runtime.
+CamSync は、防犯カメラの表示時刻と端末時計を比較し、誤差（ドリフト）を記録するための、依存関係なし・モバイルファーストの静的 PWA です。GitHub Pages を含め、完全にクライアントサイドで動作し、記録はブラウザの IndexedDB に保存します。コア機能は、バックエンド、アカウント、クラウドデータベース、分析サービス、サードパーティランタイムを必要としてはなりません。
 
-Records may contain camera locations, viewing and extraction dates, witness details, and notes. Treat them as sensitive operational data. The standalone time calculator is an independent field utility; do not connect it to saved drift records unless explicitly requested.
+記録には、カメラ設置場所、閲覧日・抽出日、立会人、補足などが含まれることがあります。これらは機微な運用データとして扱ってください。独立した時刻計算機は現場用のユーティリティであり、明示的に求められない限り、保存済みのドリフト記録と接続しないでください。
 
-## Agent Working Rules
+## エージェント作業ルール
 
-- Respond to the user in Japanese; follow the repository's existing language for code comments, commits, and documentation.
-- Inspect existing files and patterns before editing, and make small, verifiable changes.
-- Keep the app dependency-free and preserve static GitHub Pages deployment unless a larger architecture is explicitly approved.
-- Do not add server storage, analytics, remote logging, external fonts, CDN scripts, or network calls without explicit approval.
-- Preserve existing IndexedDB data and exported Markdown compatibility whenever practical.
-- Verify changes in a browser where possible. If only static checks are possible, state that limitation.
+- ユーザーへの応答は日本語で行う。コードコメント、コミット、ドキュメントはリポジトリの既存の言語に従う。
+- 編集前に既存ファイルとパターンを確認し、小さく検証可能な変更にする。
+- 明示的に大きなアーキテクチャ変更が承認されない限り、依存関係なしを維持し、静的な GitHub Pages デプロイを保つ。
+- 明示的な承認なしに、サーバー保存、分析、リモートログ、外部フォント、CDN スクリプト、ネットワーク呼び出しを追加しない。
+- 実務上可能な限り、既存の IndexedDB データとエクスポート済み Markdown の互換性を維持する。
+- 可能な場合はブラウザで変更を検証する。静的チェックのみの場合は、その制限を明記する。
 
-## Project Structure & Module Organization
+## プロジェクト構成とモジュール構成
 
-- `index.html`: markup, CSS, and inline vanilla JavaScript for all screens and application logic.
-- `sw.js`: versioned app-shell caching and offline behavior.
-- `manifest.json`: PWA installation metadata.
-- `icons/icon.svg`: application icon.
+- `index.html`: 全画面とアプリケーションロジックのマークアップ、CSS、インラインのバニラ JavaScript。
+- `sw.js`: バージョン管理されたアプリシェルのキャッシュとオフライン動作。
+- `manifest.json`: PWA インストール用メタデータ。
+- `icons/icon.svg`: アプリケーションアイコン。
 
-There is no generated build output, package manager, or test directory. The IndexedDB database is `CamSyncDB`; its `records` store uses an auto-incrementing `id` key.
+ビルド成果物、パッケージマネージャ、テストディレクトリはありません。IndexedDB のデータベース名は `CamSyncDB` で、`records` ストアは自動インクリメントの `id` キーを使います。
 
-### Code Map
+### コードマップ
 
-The inline script in `index.html` is divided by `// =====` section comments:
+`index.html` 内のインラインスクリプトは `// =====` のセクションコメントで区切られています。
 
-- IndexedDB: `openDB`, `addRecord`, `getAllRecords`, `getRecord`, `updateRecord`, `deleteRecord`, and `clearAllRecords`.
-- Drift flow: `calculate`, `saveRecord`, and related time helpers.
-- Time calculator: `calculateTimeOffset` and its helpers; keep this separate from record persistence.
-- History: `renderHistory`, swipe handlers, and edit-modal functions.
-- Markdown: `exportRecord`, `handleImportFile`, and `parseMdRecord`; imports are limited by `MAX_IMPORT_BYTES`.
+- IndexedDB: `openDB`、`addRecord`、`getAllRecords`、`getRecord`、`updateRecord`、`deleteRecord`、`clearAllRecords`。
+- ドリフトフロー: `calculate`、`saveRecord`、および関連する時刻ヘルパー。
+- 時刻計算機: `calculateTimeOffset` とそのヘルパー。記録の永続化とは分離しておく。
+- 履歴: `renderHistory`、スワイプハンドラ、編集モーダル関数。
+- Markdown: `exportRecord`、`handleImportFile`、`parseMdRecord`。インポートは `MAX_IMPORT_BYTES` で制限する。
 
-## Markdown Record Compatibility
+## Markdown 記録の互換性
 
-Export and import depend on exact Japanese labels such as `基準時刻`, `カメラ表示時刻`, `誤差`, `記録日時`, `カメラ設置場所`, `閲覧日`, `抽出日`, `立会人`, and `補足`. `exportRecord` writes `- **基準時刻:** 値`, and `parseMdRecord` matches that structure. When changing labels or formats, update both paths and continue accepting previously exported records.
+エクスポートとインポートは、`基準時刻`、`カメラ表示時刻`、`誤差`、`記録日時`、`カメラ設置場所`、`閲覧日`、`抽出日`、`立会人`、`補足` などの日本語ラベルに厳密に依存します。`exportRecord` は `- **基準時刻:** 値` と書き出し、`parseMdRecord` はその構造にマッチします。ラベルや形式を変更する場合は、両方の経路を更新し、以前にエクスポートした記録も引き続き受け入れてください。
 
-## Build, Test, and Development Commands
+## ビルド、テスト、開発コマンド
 
-Serve the repository over HTTP so IndexedDB and the service worker behave like production:
+IndexedDB とサービスワーカーが本番と同様に動作するよう、リポジトリを HTTP で配信します。
 
 ```sh
 python3 -m http.server 8000
 ```
 
-Open `http://localhost:8000/`. Useful static checks are:
+`http://localhost:8000/` を開いてください。有用な静的チェックは次のとおりです。
 
 ```sh
 node --check sw.js
@@ -54,49 +54,49 @@ python3 -m json.tool manifest.json >/dev/null
 git diff --check
 ```
 
-The service worker currently uses `camsync-v6`. After changing cached assets or `sw.js`, bump `CACHE_NAME`, then test with a hard reload or freshly registered service worker to avoid stale files.
+サービスワーカーは現在 `camsync-v6` を使用しています。キャッシュ対象アセットまたは `sw.js` を変更したあとは `CACHE_NAME` を上げ、ハードリロードまたは新規登録したサービスワーカーでテストし、古いファイルが残らないようにしてください。
 
-## Coding Style & Naming Conventions
+## コーディングスタイルと命名規約
 
-Use two-space indentation and existing section-comment patterns. Use `camelCase` for JavaScript functions and variables, `UPPER_SNAKE_CASE` for constants, and kebab-case for CSS classes. Prefer short, single-purpose functions and browser-native APIs. Avoid abstractions that require explanation.
+インデントはスペース 2 つ、既存のセクションコメントパターンに従います。JavaScript の関数と変数は `camelCase`、定数は `UPPER_SNAKE_CASE`、CSS クラスは kebab-case を使います。短く単一目的の関数と、ブラウザネイティブ API を優先してください。説明が必要な抽象化は避けます。
 
-Render user-controlled values with `textContent`, DOM creation, or `escHtml`; never insert unescaped stored or imported data into `innerHTML`. Prefer `addEventListener` for new interactions so the app can move toward a same-origin Content Security Policy.
+ユーザー制御の値は `textContent`、DOM 生成、または `escHtml` で描画します。保存データやインポートデータをエスケープせず `innerHTML` に挿入してはなりません。新しい操作には `addEventListener` を使い、同一オリジンの Content Security Policy へ移行しやすくしてください。
 
-## Testing Guidelines
+## テストガイドライン
 
-No automated framework or coverage threshold exists. Every change requires an appropriate browser smoke test at mobile width. Depending on scope, verify:
+自動テストフレームワークやカバレッジ閾値はありません。すべての変更は、モバイル幅での適切なブラウザスモークテストが必要です。範囲に応じて、次を検証してください。
 
-- drift calculation and day-boundary behavior;
-- save, edit, delete, and IndexedDB persistence;
-- old and current Markdown export/import round-trips;
-- offline loading and cache updates;
-- time-calculator independence.
+- ドリフト計算と日境界の挙動
+- 保存、編集、削除、および IndexedDB の永続化
+- 旧形式と現行形式の Markdown エクスポート／インポートの往復
+- オフライン読み込みとキャッシュ更新
+- 時刻計算機の独立性
 
-If reusable logic is extracted, use Node's built-in test runner and name files `*.test.js`. Never disable a failing test to ship a change.
+再利用可能なロジックを切り出す場合は、Node 組み込みのテストランナーを使い、ファイル名は `*.test.js` とします。変更を出荷するために失敗しているテストを無効化してはなりません。
 
-## Architecture Direction
+## アーキテクチャの方針
 
-Prefer the current small, no-build vanilla JavaScript architecture. A single `index.html` is acceptable while it remains reviewable and security-sensitive flows stay simple. Split files only when it materially improves testing, maintainability, or CSP support. A suitable no-build split is `index.html`, `styles.css`, `app.js`, `storage.js`, `markdown.js`, and `sw.js`; do not introduce a framework merely to separate files.
+現状の小さく、ビルドなしのバニラ JavaScript アーキテクチャを優先します。レビュー可能で、セキュリティ上重要なフローが単純である限り、単一の `index.html` は許容されます。ファイル分割は、テスト容易性、保守性、または CSP 対応が実質的に向上する場合に限ります。ビルドなしでの適切な分割は `index.html`、`styles.css`、`app.js`、`storage.js`、`markdown.js`、`sw.js` です。ファイルを分けるためだけにフレームワークを導入しないでください。
 
-## Commit & Pull Request Guidelines
+## コミットとプルリクエストのガイドライン
 
-Use the repository's Conventional Commit pattern with concise Japanese subjects, for example `feat: 抽出期間の日跨ぎ指定に対応`, `fix: ...`, `docs: ...`, or `chore: ...`. Keep commits focused and explain why the change is needed.
+リポジトリの Conventional Commit パターンに従い、件名は簡潔な日本語にします。例: `feat: 抽出期間の日跨ぎ指定に対応`、`fix: ...`、`docs: ...`、`chore: ...`。コミットは焦点を絞り、なぜその変更が必要かを説明してください。
 
-Pull requests should describe user-visible behavior, compatibility impact, and verification performed. Include mobile screenshots for UI changes. Explicitly note IndexedDB migrations, Markdown-format changes, service-worker cache changes, and any remaining manual verification.
+プルリクエストでは、ユーザーに見える挙動、互換性への影響、実施した検証を記述します。UI 変更にはモバイルのスクリーンショットを含めてください。IndexedDB のマイグレーション、Markdown 形式の変更、サービスワーカーキャッシュの変更、残っている手動検証は明示的に記載します。
 
-## Security & Data Compatibility
+## セキュリティとデータの互換性
 
-- Treat Markdown imports as untrusted: validate required fields, file size, value formats, and reasonable field lengths.
-- Keep Markdown exports plain and predictable; do not embed executable HTML.
-- Preserve or migrate existing IndexedDB records when schemas change.
-- Keep service-worker scope and cached request types narrow.
-- Do not hard-code secrets, tokens, credentials, or private URLs.
-- Review any proposed dependency for necessity, maintenance, license, security, and supply-chain risk.
+- Markdown インポートは信頼しない。必須フィールド、ファイルサイズ、値の形式、妥当なフィールド長を検証する。
+- Markdown エクスポートはプレーンで予測可能に保ち、実行可能な HTML を埋め込まない。
+- スキーマ変更時は、既存の IndexedDB 記録を維持するかマイグレーションする。
+- サービスワーカーのスコープとキャッシュするリクエスト種別は狭く保つ。
+- シークレット、トークン、認証情報、非公開 URL をハードコードしない。
+- 提案された依存関係は、必要性、保守状況、ライセンス、セキュリティ、サプライチェーンリスクを確認する。
 
-## Review Checklist
+## レビューチェックリスト
 
-Before completing a security- or data-sensitive change, confirm that no private data or remote call was introduced, all user-controlled rendering is intentional, old records still load, Markdown remains backward compatible, offline behavior still works, and relevant browser verification was performed.
+セキュリティまたはデータに関わる変更を完了する前に、次を確認してください。私的データやリモート呼び出しが導入されていないこと、ユーザー制御の描画が意図どおりであること、古い記録が読み込めること、Markdown が後方互換であること、オフライン動作が維持されていること、関連するブラウザ検証を実施したこと。
 
-## Non-Goals
+## 対象外
 
-Multi-user sync, server-side storage, authentication, analytics, telemetry, and a build step are out of scope unless the product direction explicitly changes.
+マルチユーザー同期、サーバーサイド保存、認証、分析、テレメトリ、ビルドステップは、製品方針が明示的に変わらない限りスコープ外です。
