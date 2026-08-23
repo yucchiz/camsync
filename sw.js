@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'camsync-';
-const CACHE_NAME = 'camsync-v12';
+const CACHE_NAME = 'camsync-v14';
 const APP_SHELL = [
   './',
   './index.html',
@@ -23,7 +23,9 @@ const APP_ENTRY_URL = new URL('./index.html', self.registration.scope).href;
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(
+      APP_SHELL.map((url) => new Request(url, { cache: 'reload' }))
+    ))
   );
 });
 
