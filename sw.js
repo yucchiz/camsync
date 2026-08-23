@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'camsync-';
-const CACHE_NAME = 'camsync-v14';
+const CACHE_NAME = 'camsync-v16';
 const APP_SHELL = [
   './',
   './index.html',
@@ -10,6 +10,7 @@ const APP_SHELL = [
   './lib/markdown.mjs',
   './lib/storage.mjs',
   './lib/backup.mjs',
+  './lib/viewport.mjs',
   './manifest.json',
   './icons/icon.svg',
   './icons/icon-192.png',

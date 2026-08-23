@@ -19,14 +19,26 @@
   --radius: 14px;
   --safe-top: env(safe-area-inset-top, 20px);
   --safe-bottom: env(safe-area-inset-bottom, 20px);
+  --app-height: 100%;
+  --visual-viewport-offset-top: 0px;
   --font-sans: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", Meiryo, sans-serif;
   --font-mono: "SFMono-Regular", "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
 }
 
+@supports (height: 100lvh) {
+  :root { --app-height: 100lvh; }
+}
+
 html, body {
-  height: 100%;
+  height: var(--app-height);
   overflow: hidden;
   overflow: clip;
+}
+html.viewport-reanchored {
+  height: calc(var(--app-height) + var(--visual-viewport-offset-top));
+}
+html.viewport-reanchored body {
+  transform: translateY(var(--visual-viewport-offset-top));
 }
 body {
   margin: 0;
@@ -60,7 +72,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible {
   flex-direction: column;
   width: 100%;
   max-width: 480px;
-  height: 100%;
+  height: var(--app-height);
   margin: 0 auto;
   overflow: hidden;
   overflow: clip;

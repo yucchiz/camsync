@@ -30,8 +30,9 @@ import {
   parseBackup,
   serializeBackup,
 } from './lib/backup.mjs';
+import { createKeyboardViewportTracker } from './lib/viewport.mjs';
 
-const APP_VERSION = '2.8.0';
+const APP_VERSION = '2.8.1';
 const DIRECTION_LABELS = {
   ahead: 'カメラ時刻が進んでいます',
   behind: 'カメラ時刻が遅れています',
@@ -72,6 +73,13 @@ let duplicateReturnFocus = null;
 let waitingWorker = null;
 let isDirty = false;
 let toastTimer = null;
+let viewportSyncFrame = null;
+let keyboardScrollTop = null;
+let keyboardWasActive = false;
+
+const viewportTracker = createKeyboardViewportTracker(
+  window.visualViewport?.height ?? window.innerHeight,
+);
 
 function pad2(value) {
   return String(value).padStart(2, '0');
@@ -739,6 +747,69 @@ function bindDirtyTracking() {
   });
 }
 
+function isKeyboardInput(target) {
+  return target instanceof Element && target.matches('input, textarea, select, [contenteditable="true"]');
+}
+
+function applyViewportAnchor() {
+  viewportSyncFrame = null;
+  const viewport = window.visualViewport;
+  if (!viewport) return;
+
+  const state = viewportTracker.update({
+    height: viewport.height,
+    offsetTop: viewport.offsetTop,
+  });
+  const offsetTop = Math.round(state.offsetTop * 100) / 100;
+  const root = document.documentElement;
+
+  root.style.setProperty('--visual-viewport-offset-top', `${offsetTop}px`);
+  root.classList.toggle('viewport-reanchored', offsetTop > 0);
+
+  if (keyboardWasActive && !state.keyboardActive && keyboardScrollTop !== null) {
+    el('appBody').scrollTop = keyboardScrollTop;
+    keyboardScrollTop = null;
+  }
+  keyboardWasActive = state.keyboardActive;
+
+  if (!state.keyboardActive) {
+    root.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }
+}
+
+function scheduleViewportAnchor() {
+  if (viewportSyncFrame !== null) cancelAnimationFrame(viewportSyncFrame);
+  viewportSyncFrame = requestAnimationFrame(applyViewportAnchor);
+}
+
+function bindViewportRecovery() {
+  const viewport = window.visualViewport;
+  if (!viewport) return;
+
+  document.addEventListener('focusin', (event) => {
+    if (!isKeyboardInput(event.target)) return;
+    if (viewportTracker.focus(viewport.height)) {
+      keyboardScrollTop = el('appBody').scrollTop;
+    }
+    scheduleViewportAnchor();
+  });
+  document.addEventListener('focusout', (event) => {
+    if (!isKeyboardInput(event.target)) return;
+    setTimeout(() => {
+      if (isKeyboardInput(document.activeElement)) return;
+      viewportTracker.blur();
+      scheduleViewportAnchor();
+      setTimeout(scheduleViewportAnchor, 120);
+      setTimeout(scheduleViewportAnchor, 360);
+    }, 0);
+  });
+  viewport.addEventListener('resize', scheduleViewportAnchor);
+  viewport.addEventListener('scroll', scheduleViewportAnchor);
+  window.addEventListener('resize', scheduleViewportAnchor);
+  scheduleViewportAnchor();
+}
+
 function showUpdate(worker) {
   waitingWorker = worker;
   el('updateBanner').hidden = false;
@@ -831,6 +902,7 @@ function bindEvents() {
 
 el('appVersion').textContent = `v${APP_VERSION.replace(/\.0$/, '')}`;
 bindEvents();
+bindViewportRecovery();
 setTimeOperator('add');
 updateClock();
 setInterval(updateClock, 250);

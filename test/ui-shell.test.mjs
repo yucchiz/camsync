@@ -18,15 +18,16 @@ function cssRule(selector) {
 }
 
 test('初期表示のバージョンはAPP_VERSIONと一致する', () => {
-  const appVersion = appScript.match(/const APP_VERSION = '(\d+)\.(\d+)\.\d+';/);
-  const fallbackVersion = indexHtml.match(/id="appVersion">v(\d+\.\d+)</);
-  const documentedVersion = readme.match(/このソースのバージョンは \*\*v(\d+\.\d+)\*\*/);
+  const appVersion = appScript.match(/const APP_VERSION = '(\d+\.\d+\.\d+)';/);
+  const fallbackVersion = indexHtml.match(/id="appVersion">v(\d+\.\d+(?:\.\d+)?)</);
+  const documentedVersion = readme.match(/このソースのバージョンは \*\*v(\d+\.\d+(?:\.\d+)?)\*\*/);
 
   assert.ok(appVersion, 'APP_VERSIONが必要です');
   assert.ok(fallbackVersion, '初期表示用のバージョンが必要です');
   assert.ok(documentedVersion, 'READMEのソースバージョンが必要です');
-  assert.equal(fallbackVersion[1], `${appVersion[1]}.${appVersion[2]}`);
-  assert.equal(documentedVersion[1], `${appVersion[1]}.${appVersion[2]}`);
+  const displayVersion = appVersion[1].replace(/\.0$/, '');
+  assert.equal(fallbackVersion[1], displayVersion);
+  assert.equal(documentedVersion[1], displayVersion);
 });
 
 test('アプリシェルはルートを固定し、本文だけをスクロールさせる', () => {
@@ -36,13 +37,17 @@ test('アプリシェルはルートを固定し、本文だけをスクロー�
   const tabRule = cssRule('.tab-bar');
 
   assert.match(rootRule, /overflow:\s*clip/);
+  assert.match(rootRule, /height:\s*var\(--app-height\)/);
   assert.match(appRule, /display:\s*flex/);
+  assert.match(appRule, /height:\s*var\(--app-height\)/);
   assert.match(appRule, /overflow:\s*clip/);
   assert.match(bodyRule, /flex:\s*1/);
   assert.match(bodyRule, /min-height:\s*0/);
   assert.match(bodyRule, /overflow-y:\s*auto/);
   assert.match(tabRule, /flex:\s*0 0 auto/);
   assert.doesNotMatch(tabRule, /position:\s*(?:fixed|absolute|sticky)/);
+  assert.match(styles, /--app-height:\s*100lvh/);
+  assert.match(styles, /html\.viewport-reanchored/);
 });
 
 test('画面切替時は本文スクロール位置をリセットする', () => {
@@ -52,9 +57,14 @@ test('画面切替時は本文スクロール位置をリセットする', () =>
   assert.match(switchScreen[0], /el\('appBody'\)\.scrollTop = 0;/);
 });
 
+test('キーボード終了時は入力前の本文スクロール位置へ戻す', () => {
+  assert.match(appScript, /el\('appBody'\)\.scrollTop = keyboardScrollTop;/);
+});
+
 test('新しいサービスワーカーはHTTPキャッシュを再検証してアプリシェルを取得する', () => {
   assert.match(
     serviceWorker,
     /APP_SHELL\.map\(\(url\) => new Request\(url, \{ cache: 'reload' \}\)\)/,
   );
+  assert.match(serviceWorker, /'\.\/lib\/viewport\.mjs'/);
 });
