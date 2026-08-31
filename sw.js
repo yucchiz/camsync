@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'camsync-';
-const CACHE_NAME = 'camsync-v16';
+const CACHE_NAME = 'camsync-v17';
 const APP_SHELL = [
   './',
   './index.html',
