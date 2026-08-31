@@ -30,9 +30,12 @@ import {
   parseBackup,
   serializeBackup,
 } from './lib/backup.mjs';
-import { createKeyboardViewportTracker } from './lib/viewport.mjs';
+import {
+  createKeyboardViewportTracker,
+  resolveVisibleAppHeight,
+} from './lib/viewport.mjs';
 
-const APP_VERSION = '2.8.1';
+const APP_VERSION = '2.8.2';
 const DIRECTION_LABELS = {
   ahead: 'カメラ時刻が進んでいます',
   behind: 'カメラ時刻が遅れています',
@@ -762,7 +765,16 @@ function applyViewportAnchor() {
   });
   const offsetTop = Math.round(state.offsetTop * 100) / 100;
   const root = document.documentElement;
+  const visibleHeight = resolveVisibleAppHeight({
+    keyboardActive: state.keyboardActive,
+    recoveryOffset: offsetTop,
+    viewportHeight: viewport.height,
+    viewportScale: viewport.scale,
+  });
 
+  if (visibleHeight !== null) {
+    root.style.setProperty('--app-height', `${Math.round(visibleHeight * 100) / 100}px`);
+  }
   root.style.setProperty('--visual-viewport-offset-top', `${offsetTop}px`);
   root.classList.toggle('viewport-reanchored', offsetTop > 0);
 

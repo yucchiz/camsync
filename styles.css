@@ -25,8 +25,8 @@
   --font-mono: "SFMono-Regular", "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
 }
 
-@supports (height: 100lvh) {
-  :root { --app-height: 100lvh; }
+@supports (height: 100dvh) {
+  :root { --app-height: 100dvh; }
 }
 
 html, body {

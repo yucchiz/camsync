@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { createKeyboardViewportTracker } from '../lib/viewport.mjs';
+import {
+  createKeyboardViewportTracker,
+  resolveVisibleAppHeight,
+} from '../lib/viewport.mjs';
 
 test('キーボード表示中はvisual viewportのパンを相殺しない', () => {
   const tracker = createKeyboardViewportTracker(844);
@@ -58,4 +61,37 @@ test('不正なviewport値は安全な値へ丸める', () => {
     keyboardActive: false,
     offsetTop: 0,
   });
+});
+
+test('キーボード非表示時は可視viewport高さをアプリ高さにする', () => {
+  assert.equal(resolveVisibleAppHeight({
+    keyboardActive: false,
+    recoveryOffset: 0,
+    viewportHeight: 640,
+    viewportScale: 1,
+  }), 640);
+});
+
+test('キーボード中とiOS残留オフセット中は高さを据え置く', () => {
+  assert.equal(resolveVisibleAppHeight({
+    keyboardActive: true,
+    recoveryOffset: 0,
+    viewportHeight: 400,
+    viewportScale: 1,
+  }), null);
+  assert.equal(resolveVisibleAppHeight({
+    keyboardActive: false,
+    recoveryOffset: 344,
+    viewportHeight: 500,
+    viewportScale: 1,
+  }), null);
+});
+
+test('ピンチズーム中はレイアウト高さを変えない', () => {
+  assert.equal(resolveVisibleAppHeight({
+    keyboardActive: false,
+    recoveryOffset: 0,
+    viewportHeight: 400,
+    viewportScale: 1.5,
+  }), null);
 });

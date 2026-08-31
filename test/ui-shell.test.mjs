@@ -46,8 +46,10 @@ test('アプリシェルはルートを固定し、本文だけをスクロー�
   assert.match(bodyRule, /overflow-y:\s*auto/);
   assert.match(tabRule, /flex:\s*0 0 auto/);
   assert.doesNotMatch(tabRule, /position:\s*(?:fixed|absolute|sticky)/);
-  assert.match(styles, /--app-height:\s*100lvh/);
+  assert.match(styles, /--app-height:\s*100dvh/);
+  assert.doesNotMatch(styles, /--app-height:\s*100lvh/);
   assert.match(styles, /html\.viewport-reanchored/);
+  assert.match(appScript, /resolveVisibleAppHeight\(/);
 });
 
 test('画面切替時は本文スクロール位置をリセットする', () => {
