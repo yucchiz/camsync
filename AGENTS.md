@@ -30,13 +30,14 @@ CamSync は、防犯カメラの表示時刻と端末時計を比較し、誤差
 
 ### コードマップ
 
-- `lib/time.mjs`: `calculateDrift`（±12 時間に正規化した誤差計算）、`calculateTimeOffset`（時間電卓）、`normalizeExtractRange`、`validateExtractRange`、`isValidDate`。
-- `lib/record.mjs`: `canonicalizeRecord`、`validateRecord`、`FIELD_LIMITS`。保存・編集・インポート・復元はすべて `validateRecord` を通し、誤差は基準時刻とカメラ時刻から再計算して整合を確認する。
+- `lib/result.mjs`: 検証結果の共通ヘルパー `error`、`failure`、`success`。`lib/` の検証系関数はこれで結果オブジェクトを作る。
+- `lib/time.mjs`: `calculateDrift`（±12 時間に正規化した誤差計算）、`calculateTimeOffset`（時間電卓）、`normalizeExtractRange`、`validateExtractRange`、`isValidDate`、日時整形の `pad2`、`formatRecordDateTime`（`YYYY/MM/DD HH:mm`、無効値は `null`）、`formatCompactDateTime`（ファイル名用の `YYYYMMDD_HHmm[ss]`）。
+- `lib/record.mjs`: `RECORD_KEYS`（記録フィールド一覧の正本。並び順はバックアップの SHA-256 に影響するため変更しない）、`canonicalizeRecord`、`validateRecord`、`FIELD_LIMITS`。保存・編集・インポート・復元はすべて `validateRecord` を通し、誤差は基準時刻とカメラ時刻から再計算して整合を確認する。
 - `lib/markdown.mjs`: `serializeRecordToMarkdown`、`parseMarkdownRecord`。インポートは `MAX_MARKDOWN_BYTES`（1 MiB）で制限する。
 - `lib/storage.mjs`: `openDB`、`addRecord`、`getAllRecords`、`getRecord`、`updateRecord`、`deleteRecord`、`clearAllRecords`、`bulkAddRecords`、`replaceAllRecords`。失敗は `StorageError` で通知する。
 - `lib/backup.mjs`: `createBackup`、`serializeBackup`、`parseBackup`（SHA-256 検証、`MAX_BACKUP_BYTES` 10 MiB、`MAX_BACKUP_RECORDS` 10,000 件）、`createDuplicatePlan`、`createRestorePlan`、`estimateSerializedBackupBytes`、`assessBackupCapacity`。失敗は `BackupError` で通知する。
 - `lib/viewport.mjs`: iOS のキーボード表示後に viewport がずれる問題の補正（`createKeyboardViewportTracker`、`resolveVisibleAppHeight`）。
-- `app.mjs`: 誤差計算フロー（`lockClock`、`calculateCameraDrift`、`saveCurrentRecord`）、時間電卓（`runTimeCalculator`）、履歴（`renderHistory`、編集モーダル）、入出力（`exportMarkdown`、`importMarkdownFile`、`backupAllRecords`、`prepareRestore`、`restoreMerge`、`restoreReplace`）。
+- `app.mjs`: フォーム要素 ID の対応表 `FORM_FIELD_IDS`（作成・編集）、ダイアログ開閉の `openDialog`／`closeDialog`／`bindDialogKeys`、誤差計算フロー（`lockClock`、`calculateCameraDrift`、`saveCurrentRecord`）、時間電卓（`runTimeCalculator`）、履歴（`renderHistory`、編集モーダル）、入出力（`exportMarkdown`、`importMarkdownFile`、`backupAllRecords`、`prepareRestore`、`restoreMerge`、`restoreReplace`）。
 
 `lib/` の検証系関数は例外を投げず `{ ok: true, value }` または `{ ok: false, errors: [{ code, field, message }] }` を返します。新しい検証もこの形に揃えてください。時間電卓は記録の永続化から分離したままにします。
 
