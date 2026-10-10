@@ -298,3 +298,46 @@ test('推定バイト数はバックアップ件数上限を超えた履歴で�
   assert.ok(Number.isSafeInteger(bytes));
   assert.ok(bytes > 0);
 });
+
+test('推定バイト数は多様な記録でも実バックアップ出力と一致する', async () => {
+  const records = [
+    makeRecord({ id: 1, notes: '' }),
+    makeRecord({ id: 2, location: 'quote " backslash \\ tab\t', notes: '絵文字😀\r\n改行' }),
+    makeRecord({ id: 3, extractEndDate: '', extractEndTime: '', witnessAge: '' }),
+    makeRecord({ id: 40, timestamp: 0, location: '', witnessName: '' }),
+  ];
+  const options = {
+    appVersion: '2.8.0',
+    exportedAt: '2026-08-11T06:00:00.000Z',
+  };
+  const backup = await createBackup(records, options);
+  const actualBytes = new TextEncoder().encode(serializeBackup(backup)).byteLength;
+
+  assert.equal(estimateSerializedBackupBytes(records, options), actualBytes);
+});
+
+test('推定バイト数はIDが重複する記録を拒否する', () => {
+  assert.throws(
+    () => estimateSerializedBackupBytes([makeRecord(), makeRecord()], {
+      appVersion: '1.0.0',
+      exportedAt: '2026-08-11T06:00:00.000Z',
+    }),
+    (error) => error instanceof BackupError && error.code === 'DUPLICATE_RECORD_ID'
+      && error.details.index === 1 && error.details.id === 7,
+  );
+});
+
+test('parseBackupの上限オプションは不正値をTypeErrorで拒否する', async () => {
+  await assert.rejects(
+    parseBackup('{}', { maxBytes: 0 }),
+    { name: 'TypeError', message: 'maxBytes must be a positive safe integer' },
+  );
+  await assert.rejects(
+    parseBackup('{}', { maxRecords: -1 }),
+    { name: 'TypeError', message: 'maxRecords must be a non-negative safe integer' },
+  );
+  await assert.rejects(
+    parseBackup('{}', { maxRecords: 1.5 }),
+    { name: 'TypeError', message: 'maxRecords must be a non-negative safe integer' },
+  );
+});

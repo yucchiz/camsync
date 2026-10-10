@@ -1,7 +1,10 @@
 import {
   calculateDrift,
   calculateTimeOffset,
+  formatCompactDateTime,
+  formatRecordDateTime as formatRecordDateTimeOrNull,
   normalizeExtractRange,
+  pad2,
   validateExtractRange,
 } from './lib/time.mjs';
 import { validateRecord } from './lib/record.mjs';
@@ -35,7 +38,7 @@ import {
   resolveVisibleAppHeight,
 } from './lib/viewport.mjs';
 
-const APP_VERSION = '2.8.2';
+const APP_VERSION = '2.8.3';
 const DIRECTION_LABELS = {
   ahead: 'カメラ時刻が進んでいます',
   behind: 'カメラ時刻が遅れています',
@@ -61,6 +64,31 @@ const CAPACITY_LEVEL_ACTIONS = {
   limit: 'これ以上増える前に全件バックアップし、不要な履歴を整理してください。',
   over: '全件バックアップまたは復元ができない可能性があります。重要な記録を個別にMD出力してから、不要な履歴を整理してください。',
 };
+// 記録フォームのフィールド名と入力要素IDの対応表（作成フォーム・編集フォーム）。
+const FORM_FIELD_IDS = Object.freeze({
+  create: Object.freeze({
+    location: 'camLocation',
+    viewDate: 'viewDate',
+    extractDate: 'extractDate',
+    extractStartTime: 'extractStartTime',
+    extractEndDate: 'extractEndDate',
+    extractEndTime: 'extractEndTime',
+    witnessName: 'witnessName',
+    witnessAge: 'witnessAge',
+    notes: 'notes',
+  }),
+  edit: Object.freeze({
+    location: 'editLocation',
+    viewDate: 'editViewDate',
+    extractDate: 'editExtractDate',
+    extractStartTime: 'editExtractStartTime',
+    extractEndDate: 'editExtractEndDate',
+    extractEndTime: 'editExtractEndTime',
+    witnessName: 'editWitnessName',
+    witnessAge: 'editWitnessAge',
+    notes: 'editNotes',
+  }),
+});
 const el = (id) => document.getElementById(id);
 
 let lockedRefDate = null;
@@ -68,11 +96,9 @@ let lastCalcResult = null;
 let timeCalcOperator = 'add';
 let editingRecordId = null;
 let editingBaseResult = null;
-let editReturnFocus = null;
 let pendingDuplicateRecord = null;
 let pendingRestoreRecords = null;
-let restoreReturnFocus = null;
-let duplicateReturnFocus = null;
+let dialogReturnFocus = null;
 let waitingWorker = null;
 let isDirty = false;
 let toastTimer = null;
@@ -84,10 +110,6 @@ const viewportTracker = createKeyboardViewportTracker(
   window.visualViewport?.height ?? window.innerHeight,
 );
 
-function pad2(value) {
-  return String(value).padStart(2, '0');
-}
-
 function formatHms(date) {
   return `${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`;
 }
@@ -97,9 +119,7 @@ function formatDateInput(date) {
 }
 
 function formatRecordDateTime(timestamp) {
-  const date = new Date(timestamp);
-  if (!Number.isFinite(date.getTime())) return '日時不明';
-  return `${date.getFullYear()}/${pad2(date.getMonth() + 1)}/${pad2(date.getDate())} ${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+  return formatRecordDateTimeOrNull(timestamp) ?? '日時不明';
 }
 
 function showToast(message, isError = false) {
@@ -164,8 +184,22 @@ function resetLock({ preserveDirty = false } = {}) {
   if (!preserveDirty) setDirty(false);
 }
 
-function cameraTimeValue() {
-  return `${el('camH').value.padStart(2, '0')}:${el('camM').value.padStart(2, '0')}:${el('camS').value.padStart(2, '0')}`;
+const CAMERA_TIME_INPUT_IDS = ['camH', 'camM', 'camS'];
+const TIME_CALC_BASE_INPUT_IDS = ['timeCalcH', 'timeCalcM', 'timeCalcS'];
+const TIME_CALC_DURATION_INPUT_IDS = ['timeCalcDiffH', 'timeCalcDiffM', 'timeCalcDiffS'];
+
+function hasEmptyInput(ids) {
+  return ids.some((id) => el(id).value === '');
+}
+
+// 時間差の「時」は3桁まで入るため、桁を切らずに2桁未満だけ0埋めする。
+function readClockInputs(ids, { emptyAsZero = false } = {}) {
+  return ids
+    .map((id) => {
+      const value = el(id).value;
+      return (emptyAsZero && value === '' ? '0' : value).padStart(2, '0');
+    })
+    .join(':');
 }
 
 function calculateCameraDrift() {
@@ -173,11 +207,11 @@ function calculateCameraDrift() {
     showToast('先に基準時刻を固定してください', true);
     return;
   }
-  if ([el('camH'), el('camM'), el('camS')].some((input) => input.value === '')) {
+  if (hasEmptyInput(CAMERA_TIME_INPUT_IDS)) {
     showToast('カメラ時刻を入力してください', true);
     return;
   }
-  const result = calculateDrift(formatHms(lockedRefDate), cameraTimeValue());
+  const result = calculateDrift(formatHms(lockedRefDate), readClockInputs(CAMERA_TIME_INPUT_IDS));
   if (!result.ok) {
     showToast(firstErrorMessage(result, 'カメラ時刻を24時間表記で入力してください'), true);
     return;
@@ -196,19 +230,7 @@ function calculateCameraDrift() {
 }
 
 function recordFromForm(mode = 'create') {
-  const ids = mode === 'edit'
-    ? {
-        location: 'editLocation', viewDate: 'editViewDate', extractDate: 'editExtractDate',
-        extractStartTime: 'editExtractStartTime', extractEndDate: 'editExtractEndDate',
-        extractEndTime: 'editExtractEndTime', witnessName: 'editWitnessName',
-        witnessAge: 'editWitnessAge', notes: 'editNotes',
-      }
-    : {
-        location: 'camLocation', viewDate: 'viewDate', extractDate: 'extractDate',
-        extractStartTime: 'extractStartTime', extractEndDate: 'extractEndDate',
-        extractEndTime: 'extractEndTime', witnessName: 'witnessName',
-        witnessAge: 'witnessAge', notes: 'notes',
-      };
+  const ids = FORM_FIELD_IDS[mode];
   const range = normalizeExtractRange({
     startDate: el(ids.extractDate).value,
     startTime: el(ids.extractStartTime).value,
@@ -253,19 +275,8 @@ async function saveCurrentRecord() {
 
 function resetRecordForm() {
   resetLock();
-  for (const id of [
-    'camH', 'camM', 'camS', 'camLocation', 'viewDate', 'extractDate',
-    'extractStartTime', 'extractEndDate', 'extractEndTime', 'witnessName',
-    'witnessAge', 'notes',
-  ]) el(id).value = '';
+  for (const id of [...CAMERA_TIME_INPUT_IDS, ...Object.values(FORM_FIELD_IDS.create)]) el(id).value = '';
   setDirty(false);
-}
-
-function durationValue() {
-  const hours = el('timeCalcDiffH').value || '0';
-  const minutes = el('timeCalcDiffM').value || '0';
-  const seconds = el('timeCalcDiffS').value || '0';
-  return `${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}:${seconds.padStart(2, '0')}`;
 }
 
 function setTimeOperator(operator) {
@@ -278,12 +289,13 @@ function setTimeOperator(operator) {
 }
 
 function runTimeCalculator() {
-  if ([el('timeCalcH'), el('timeCalcM'), el('timeCalcS')].some((input) => input.value === '')) {
+  if (hasEmptyInput(TIME_CALC_BASE_INPUT_IDS)) {
     showToast('基準時刻を入力してください', true);
     return;
   }
-  const base = `${el('timeCalcH').value.padStart(2, '0')}:${el('timeCalcM').value.padStart(2, '0')}:${el('timeCalcS').value.padStart(2, '0')}`;
-  const result = calculateTimeOffset(base, durationValue(), timeCalcOperator);
+  const base = readClockInputs(TIME_CALC_BASE_INPUT_IDS);
+  const duration = readClockInputs(TIME_CALC_DURATION_INPUT_IDS, { emptyAsZero: true });
+  const result = calculateTimeOffset(base, duration, timeCalcOperator);
   if (!result.ok) {
     showToast(firstErrorMessage(result, '時刻と時間差を確認してください'), true);
     return;
@@ -291,7 +303,7 @@ function runTimeCalculator() {
   el('timeCalcResultTime').textContent = result.value.resultTime;
   el('timeCalcDayNote').textContent = result.value.dayLabel;
   el('timeCalcDayNote').classList.toggle('shifted', result.value.dayOffset !== 0);
-  el('timeCalcDetail').textContent = `計算: ${base} ${timeCalcOperator === 'sub' ? '-' : '+'} ${durationValue()}\n結果: ${result.value.dayLabel} ${result.value.resultTime}`;
+  el('timeCalcDetail').textContent = `計算: ${base} ${timeCalcOperator === 'sub' ? '-' : '+'} ${duration}\n結果: ${result.value.dayLabel} ${result.value.resultTime}`;
   el('timeCalcResultPanel').hidden = false;
 }
 
@@ -405,19 +417,22 @@ function updateHistoryCapacity(records) {
   }
 }
 
+let historyRenderGeneration = 0;
+
 async function renderHistory() {
-  const list = el('historyList');
-  list.replaceChildren();
+  const generation = ++historyRenderGeneration;
   try {
     const records = await getAllRecords();
+    // 待機中に新しい呼び出しが始まっていたら、最新の呼び出しだけがDOMを更新する。
+    if (generation !== historyRenderGeneration) return;
     updateHistoryCapacity(records);
     el('clearAllBtn').hidden = records.length === 0;
+    const fragment = document.createDocumentFragment();
     if (records.length === 0) {
       const empty = document.createElement('p');
       empty.className = 'history-empty';
       empty.textContent = '記録はまだありません';
-      list.append(empty);
-      return;
+      fragment.append(empty);
     }
     for (const record of records) {
       const article = document.createElement('article');
@@ -428,7 +443,7 @@ async function renderHistory() {
       date.className = 'history-date';
       date.textContent = formatRecordDateTime(record.timestamp);
       const diff = document.createElement('span');
-      const direction = ['ahead', 'behind', 'exact'].includes(record.direction) ? record.direction : 'exact';
+      const direction = Object.hasOwn(DIRECTION_LABELS, record.direction) ? record.direction : 'exact';
       diff.className = `history-diff ${direction}`;
       diff.textContent = record.displayVal || '誤差不明';
       header.append(date, diff);
@@ -443,10 +458,13 @@ async function renderHistory() {
         makeButton('削除', 'delete-btn', () => removeRecord(record.id)),
       );
       article.append(header, meta, actions);
-      list.append(article);
+      fragment.append(article);
     }
+    el('historyList').replaceChildren(fragment);
   } catch (error) {
+    if (generation !== historyRenderGeneration) return;
     console.error(error);
+    el('historyList').replaceChildren();
     showToast('履歴の読み込みに失敗しました', true);
   }
 }
@@ -465,15 +483,7 @@ async function removeRecord(id) {
 
 function fillEditForm(record) {
   el('editReadonly').textContent = `基準時刻: ${record.refTime}\nカメラ時刻: ${record.camTime}\n誤差: ${record.displayVal}`;
-  el('editLocation').value = record.location || '';
-  el('editViewDate').value = record.viewDate || '';
-  el('editExtractDate').value = record.extractDate || '';
-  el('editExtractStartTime').value = record.extractStartTime || '';
-  el('editExtractEndDate').value = record.extractEndDate || '';
-  el('editExtractEndTime').value = record.extractEndTime || '';
-  el('editWitnessName').value = record.witnessName || '';
-  el('editWitnessAge').value = record.witnessAge || '';
-  el('editNotes').value = record.notes || '';
+  for (const [field, id] of Object.entries(FORM_FIELD_IDS.edit)) el(id).value = record[field] || '';
 }
 
 function focusableElements(container) {
@@ -496,6 +506,27 @@ function trapFocus(event, container) {
   }
 }
 
+function openDialog(container, { initialFocus, returnFocus }) {
+  dialogReturnFocus = returnFocus;
+  el('appRoot').inert = true;
+  container.hidden = false;
+  initialFocus.focus();
+}
+
+function closeDialog(container) {
+  container.hidden = true;
+  el('appRoot').inert = false;
+  dialogReturnFocus?.focus();
+  dialogReturnFocus = null;
+}
+
+function bindDialogKeys(dialog, onClose) {
+  dialog.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') onClose();
+    else trapFocus(event, dialog);
+  });
+}
+
 async function openEditModal(id, trigger) {
   try {
     const record = await getRecord(id);
@@ -509,10 +540,7 @@ async function openEditModal(id, trigger) {
       displayVal: record.displayVal,
     };
     fillEditForm(record);
-    editReturnFocus = trigger;
-    el('appRoot').inert = true;
-    el('editOverlay').hidden = false;
-    el('editLocation').focus();
+    openDialog(el('editOverlay'), { initialFocus: el('editLocation'), returnFocus: trigger });
   } catch (error) {
     console.error(error);
     showToast('記録を読み込めませんでした', true);
@@ -522,10 +550,7 @@ async function openEditModal(id, trigger) {
 function closeEditModal() {
   editingRecordId = null;
   editingBaseResult = null;
-  el('editOverlay').hidden = true;
-  el('appRoot').inert = false;
-  editReturnFocus?.focus();
-  editReturnFocus = null;
+  closeDialog(el('editOverlay'));
 }
 
 async function saveEditedRecord() {
@@ -572,13 +597,12 @@ async function exportMarkdown(id) {
     if (!record) throw new Error('Record not found');
     const result = serializeRecordToMarkdown(record);
     if (!result.ok) throw new Error(firstErrorMessage(result, 'Markdownを生成できません'));
-    const date = new Date(record.timestamp);
-    const filename = `camsync_${date.getFullYear()}${pad2(date.getMonth() + 1)}${pad2(date.getDate())}_${pad2(date.getHours())}${pad2(date.getMinutes())}.md`;
+    const filename = `camsync_${formatCompactDateTime(new Date(record.timestamp))}.md`;
     downloadText(filename, result.value, 'text/markdown;charset=utf-8');
     showToast('Markdownを出力しました');
   } catch (error) {
     console.error(error);
-    showToast(error.message || 'Markdown出力に失敗しました', true);
+    showToast(formatCaughtError(error, 'Markdown出力に失敗しました'), true);
   }
 }
 
@@ -596,10 +620,7 @@ async function importMarkdownFile(file) {
     const duplicatePlan = createDuplicatePlan([parsed.value], existing, { timestampPrecision: 'minute' });
     if (duplicatePlan.duplicates.length > 0) {
       pendingDuplicateRecord = parsed.value;
-      duplicateReturnFocus = el('importMarkdownBtn');
-      el('appRoot').inert = true;
-      el('duplicateDialog').hidden = false;
-      el('duplicateCancelBtn').focus();
+      openDialog(el('duplicateDialog'), { initialFocus: el('duplicateCancelBtn'), returnFocus: el('importMarkdownBtn') });
       return;
     }
     await addRecord(parsed.value);
@@ -607,16 +628,13 @@ async function importMarkdownFile(file) {
     showToast('記録をインポートしました');
   } catch (error) {
     console.error(error);
-    showToast(error.message || 'インポートに失敗しました', true);
+    showToast(formatCaughtError(error, 'インポートに失敗しました'), true);
   }
 }
 
 function closeDuplicateDialog() {
   pendingDuplicateRecord = null;
-  el('duplicateDialog').hidden = true;
-  el('appRoot').inert = false;
-  duplicateReturnFocus?.focus();
-  duplicateReturnFocus = null;
+  closeDialog(el('duplicateDialog'));
 }
 
 async function forceAddDuplicate() {
@@ -636,8 +654,7 @@ async function backupAllRecords() {
   try {
     const records = await getAllRecords();
     const backup = await createBackup(records, { appVersion: APP_VERSION });
-    const now = new Date();
-    const filename = `camsync_backup_${now.getFullYear()}${pad2(now.getMonth() + 1)}${pad2(now.getDate())}_${pad2(now.getHours())}${pad2(now.getMinutes())}${pad2(now.getSeconds())}.json`;
+    const filename = `camsync_backup_${formatCompactDateTime(new Date(), { seconds: true })}.json`;
     downloadText(filename, serializeBackup(backup), 'application/json;charset=utf-8');
     showToast(`${records.length}件をバックアップしました`);
   } catch (error) {
@@ -652,10 +669,7 @@ async function prepareRestore(file) {
     const backup = await parseBackup(text);
     pendingRestoreRecords = backup.records;
     el('restoreSummary').textContent = `${backup.records.length}件の記録を検証しました。追加するか、現在の履歴を全件置換するか選択してください。`;
-    restoreReturnFocus = el('restoreBackupBtn');
-    el('appRoot').inert = true;
-    el('restoreDialog').hidden = false;
-    el('restoreCancelBtn').focus();
+    openDialog(el('restoreDialog'), { initialFocus: el('restoreCancelBtn'), returnFocus: el('restoreBackupBtn') });
   } catch (error) {
     console.error(error);
     showToast(formatCaughtError(error, 'バックアップを読み取れません'), true);
@@ -664,10 +678,7 @@ async function prepareRestore(file) {
 
 function closeRestoreDialog() {
   pendingRestoreRecords = null;
-  el('restoreDialog').hidden = true;
-  el('appRoot').inert = false;
-  restoreReturnFocus?.focus();
-  restoreReturnFocus = null;
+  closeDialog(el('restoreDialog'));
 }
 
 async function restoreMerge() {
@@ -682,7 +693,7 @@ async function restoreMerge() {
     showToast(message);
   } catch (error) {
     console.error(error);
-    showToast(error.message || '復元に失敗しました', true);
+    showToast(formatCaughtError(error, '復元に失敗しました'), true);
   }
 }
 
@@ -698,7 +709,7 @@ async function restoreReplace() {
     showToast(`${count}件を復元しました`);
   } catch (error) {
     console.error(error);
-    showToast(error.message || '全件置換に失敗しました', true);
+    showToast(formatCaughtError(error, '全件置換に失敗しました'), true);
   }
 }
 
@@ -719,12 +730,12 @@ function addDays(dateValue, days) {
   return formatDateInput(new Date(year, month - 1, day + days));
 }
 
-function bindExtractAssist(prefix = '') {
-  const stem = prefix === 'edit' ? 'editExtract' : 'extract';
-  const startDate = el(`${stem}Date`);
-  const startTime = el(`${stem}StartTime`);
-  const endDate = el(`${stem}EndDate`);
-  const endTime = el(`${stem}EndTime`);
+function bindExtractAssist(mode = 'create') {
+  const ids = FORM_FIELD_IDS[mode];
+  const startDate = el(ids.extractDate);
+  const startTime = el(ids.extractStartTime);
+  const endDate = el(ids.extractEndDate);
+  const endTime = el(ids.extractEndTime);
   const assist = () => {
     if (startDate.value && startTime.value && endTime.value && !endDate.value && endTime.value < startTime.value) {
       endDate.value = addDays(startDate.value, 1);
@@ -868,10 +879,7 @@ function bindEvents() {
   el('editOverlay').addEventListener('click', (event) => {
     if (event.target === el('editOverlay')) closeEditModal();
   });
-  el('editDialog').addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') closeEditModal();
-    else trapFocus(event, el('editDialog'));
-  });
+  bindDialogKeys(el('editDialog'), closeEditModal);
 
   el('importMarkdownBtn').addEventListener('click', () => el('importFileInput').click());
   el('importFileInput').addEventListener('change', async (event) => {
@@ -890,25 +898,19 @@ function bindEvents() {
 
   el('duplicateCancelBtn').addEventListener('click', closeDuplicateDialog);
   el('duplicateAddBtn').addEventListener('click', forceAddDuplicate);
-  el('duplicateDialog').addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') closeDuplicateDialog();
-    else trapFocus(event, el('duplicateDialog'));
-  });
+  bindDialogKeys(el('duplicateDialog'), closeDuplicateDialog);
   el('restoreCancelBtn').addEventListener('click', closeRestoreDialog);
   el('restoreMergeBtn').addEventListener('click', restoreMerge);
   el('restoreReplaceBtn').addEventListener('click', restoreReplace);
-  el('restoreDialog').addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') closeRestoreDialog();
-    else trapFocus(event, el('restoreDialog'));
-  });
+  bindDialogKeys(el('restoreDialog'), closeRestoreDialog);
 
   el('updateLaterBtn').addEventListener('click', () => { el('updateBanner').hidden = true; });
   el('updateNowBtn').addEventListener('click', applyUpdate);
-  bindExtractAssist('');
+  bindExtractAssist('create');
   bindExtractAssist('edit');
-  bindAutoAdvance(['camH', 'camM', 'camS'], [2, 2, 2]);
-  bindAutoAdvance(['timeCalcH', 'timeCalcM', 'timeCalcS'], [2, 2, 2]);
-  bindAutoAdvance(['timeCalcDiffH', 'timeCalcDiffM', 'timeCalcDiffS'], [3, 2, 2]);
+  bindAutoAdvance(CAMERA_TIME_INPUT_IDS, [2, 2, 2]);
+  bindAutoAdvance(TIME_CALC_BASE_INPUT_IDS, [2, 2, 2]);
+  bindAutoAdvance(TIME_CALC_DURATION_INPUT_IDS, [3, 2, 2]);
   bindDirtyTracking();
 }
 

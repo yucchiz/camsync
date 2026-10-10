@@ -4,7 +4,10 @@ import assert from 'node:assert/strict';
 import {
   calculateDrift,
   calculateTimeOffset,
+  formatCompactDateTime,
+  formatRecordDateTime,
   normalizeExtractRange,
+  pad2,
   validateExtractRange
 } from '../lib/time.mjs';
 
@@ -159,4 +162,27 @@ test('validateExtractRange still accepts existing HH:MM extract times', () => {
   assert.equal(result.ok, true);
   assert.equal(result.value.startTime, '10:00');
   assert.equal(result.value.endTime, '11:00');
+});
+
+test('pad2 left-pads numbers to two digits', () => {
+  assert.equal(pad2(0), '00');
+  assert.equal(pad2(7), '07');
+  assert.equal(pad2(12), '12');
+});
+
+test('formatRecordDateTime formats local time as YYYY/MM/DD HH:mm', () => {
+  assert.equal(formatRecordDateTime(new Date(2024, 0, 2, 3, 4, 5).getTime()), '2024/01/02 03:04');
+  assert.equal(formatRecordDateTime(new Date(2025, 11, 31, 23, 59, 59).getTime()), '2025/12/31 23:59');
+});
+
+test('formatRecordDateTime returns null for invalid timestamps', () => {
+  assert.equal(formatRecordDateTime(Number.NaN), null);
+  assert.equal(formatRecordDateTime(undefined), null);
+  assert.equal(formatRecordDateTime('not a date'), null);
+});
+
+test('formatCompactDateTime formats file name timestamps', () => {
+  const date = new Date(2024, 0, 2, 3, 4, 5);
+  assert.equal(formatCompactDateTime(date), '20240102_0304');
+  assert.equal(formatCompactDateTime(date, { seconds: true }), '20240102_030405');
 });

@@ -1,10 +1,11 @@
 const CACHE_PREFIX = 'camsync-';
-const CACHE_NAME = 'camsync-v17';
+const CACHE_NAME = 'camsync-v18';
 const APP_SHELL = [
   './',
   './index.html',
   './styles.css',
   './app.mjs',
+  './lib/result.mjs',
   './lib/time.mjs',
   './lib/record.mjs',
   './lib/markdown.mjs',

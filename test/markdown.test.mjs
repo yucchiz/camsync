@@ -107,6 +107,7 @@ test('parseMarkdownRecord rejects invalid optional field values', async () => {
 
 test('parseMarkdownRecord rejects non-canonical zero and exact diff signs', async () => {
   const original = await readFile(fixtureUrl('current-cross-day.md'), 'utf8');
-  assert.equal(parseMarkdownRecord(original.replace('+1分2秒', '+0秒')).errors[0].code, 'invalid_diff');
-  assert.equal(parseMarkdownRecord(original.replace('+1分2秒', '±1秒')).errors[0].code, 'invalid_diff');
+  for (const replacement of ['+0秒', '-0秒', '+0分0秒', '±1秒', '±5秒', '±1分0秒']) {
+    assert.equal(parseMarkdownRecord(original.replace('+1分2秒', replacement)).errors[0].code, 'invalid_diff', replacement);
+  }
 });

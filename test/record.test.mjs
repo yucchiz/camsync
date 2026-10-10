@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { FIELD_LIMITS, canonicalizeRecord, validateRecord } from '../lib/record.mjs';
+import { FIELD_LIMITS, RECORD_KEYS, canonicalizeRecord, validateRecord } from '../lib/record.mjs';
 
 function validRecord(overrides = {}) {
   return {
@@ -84,4 +84,40 @@ test('validateRecord accepts iOS second-precision extract times and canonicalize
   assert.equal(result.ok, true);
   assert.equal(result.value.extractStartTime, '23:50');
   assert.equal(result.value.extractEndTime, '00:10');
+});
+
+test('RECORD_KEYS lists every record field in the backup digest order', () => {
+  assert.deepEqual(RECORD_KEYS, [
+    'id',
+    'timestamp',
+    'refTime',
+    'camTime',
+    'diffSec',
+    'direction',
+    'displayVal',
+    'location',
+    'viewDate',
+    'extractDate',
+    'extractStartTime',
+    'extractEndDate',
+    'extractEndTime',
+    'witnessName',
+    'witnessAge',
+    'notes'
+  ]);
+  assert.equal(Object.isFrozen(RECORD_KEYS), true);
+});
+
+test('canonicalizeRecord produces exactly the RECORD_KEYS fields', () => {
+  const canonical = canonicalizeRecord(validRecord({ id: 3 }), { allowId: true });
+  assert.deepEqual(Object.keys(canonical).sort(), [...RECORD_KEYS].sort());
+  assert.deepEqual(Object.keys(canonicalizeRecord(validRecord())), RECORD_KEYS.filter((key) => key !== 'id'));
+});
+
+test('validateRecord rejects non-string values for every string field', () => {
+  for (const field of RECORD_KEYS.filter((key) => !['id', 'timestamp', 'diffSec'].includes(key))) {
+    const result = validateRecord(validRecord({ [field]: 1 }));
+    assert.equal(result.ok, false, field);
+    assert.ok(result.errors.some((item) => item.code === 'invalid_field_type' && item.field === field), field);
+  }
 });
