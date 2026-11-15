@@ -77,6 +77,12 @@ html, body {
   overflow: hidden;
   overflow: clip;
 }
+/* iOS のホーム画面アプリは、dvh と visualViewport の高さを上端セーフエリアの分だけ短く報告する
+   （iPhone 16 で 852 に対し 793）。そのままだと下端に余白ができるため、画面全体を指す vh を使う。 */
+html.ios-standalone { --app-height: 100vh; }
+html.ios-standalone .edit-overlay,
+html.ios-standalone .confirm-overlay { bottom: calc(100dvh - 100vh); }
+html.ios-standalone .toast { bottom: calc(86px + var(--safe-bottom) + 100dvh - 100vh); }
 html.viewport-reanchored {
   height: calc(var(--app-height) + var(--visual-viewport-offset-top));
 }

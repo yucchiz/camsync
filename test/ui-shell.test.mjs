@@ -169,3 +169,12 @@ test('フォーカストラップは非表示の祖先を持つ要素とリン�
   assert.match(focusable[0], /a\[href\]/);
   assert.match(focusable[0], /closest\('\[hidden\]'\)/);
 });
+
+test('iOSのホーム画面アプリでは画面全体の高さ（100vh）を使い、下端の余白を作らない', () => {
+  // iOS の standalone では dvh・visualViewport が上端セーフエリアの分だけ短く報告される。
+  assert.match(styles, /html\.ios-standalone\s*\{[^}]*--app-height:\s*100vh/);
+  assert.match(styles, /html\.ios-standalone \.edit-overlay,\s*html\.ios-standalone \.confirm-overlay\s*\{[^}]*bottom:\s*calc\(100dvh - 100vh\)/);
+  assert.match(appScript, /navigator\.standalone === true/);
+  assert.match(appScript, /classList\.add\('ios-standalone'\)/);
+  assert.match(appScript, /visibleHeight !== null && !IOS_STANDALONE/);
+});

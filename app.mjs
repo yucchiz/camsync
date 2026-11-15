@@ -185,6 +185,10 @@ const recordDeleter = createDeferredRecordDeleter({
   },
 });
 
+// navigator.standalone は iOS だけが持つ。ホーム画面から起動したときに true になる。
+const IOS_STANDALONE = navigator.standalone === true;
+if (IOS_STANDALONE) document.documentElement.classList.add('ios-standalone');
+
 const viewportTracker = createKeyboardViewportTracker(
   window.visualViewport?.height ?? window.innerHeight,
 );
@@ -1606,7 +1610,8 @@ function applyViewportAnchor() {
     viewportScale: viewport.scale,
   });
 
-  if (visibleHeight !== null) {
+  // iOS のホーム画面アプリでは visualViewport の高さが短く報告されるため、CSS 側の 100vh に任せる。
+  if (visibleHeight !== null && !IOS_STANDALONE) {
     root.style.setProperty('--app-height', `${Math.round(visibleHeight * 100) / 100}px`);
   }
   root.style.setProperty('--visual-viewport-offset-top', `${offsetTop}px`);
