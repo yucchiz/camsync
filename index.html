@@ -7,9 +7,10 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#0a0e17">
+  <meta name="theme-color" content="#f1f5f9" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0a0e17" media="(prefers-color-scheme: dark)">
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+    content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; font-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -21,7 +22,7 @@
   <div class="app" id="appRoot">
     <header class="app-header">
       <div class="app-title">Cam<span>Sync</span></div>
-      <div class="app-version" id="appVersion">v2.8.3</div>
+      <div class="app-version" id="appVersion">v2.9</div>
     </header>
 
     <div class="update-banner" id="updateBanner" role="status" hidden>
@@ -46,7 +47,14 @@
         <section id="lockedDisplay" class="locked-time-display" aria-label="固定された基準時刻" hidden>
           <p class="small-label">固定された基準時刻</p>
           <p id="lockedTime" class="locked-time">--:--:--</p>
-          <button id="resetLockBtn" class="text-btn" type="button">リセット</button>
+          <div class="locked-actions">
+            <button id="relockBtn" class="secondary-btn" type="button">固定し直す</button>
+            <button id="resetLockBtn" class="text-btn" type="button">リセット</button>
+          </div>
+        </section>
+
+        <section id="draftNotice" class="draft-notice" role="status" hidden>
+          <p id="draftNoticeText"></p>
         </section>
 
         <section class="card">
@@ -85,7 +93,7 @@
               <input type="date" id="viewDate">
             </div>
             <fieldset class="field-group extract-fieldset">
-              <legend>抽出期間（終了日が空欄の場合は開始日と同日）</legend>
+              <legend>抽出期間（実時刻で入力。終了日が空欄の場合は開始日と同日）</legend>
               <div class="extract-row">
                 <span class="range-label">開始</span>
                 <label class="sr-only" for="extractDate">抽出開始日</label>
@@ -178,7 +186,11 @@
           <p id="historyCapacitySummary" class="history-capacity-summary">保存済み：0件 / 10,000件 ／ 推定バックアップ容量：0.00 MiB / 10.00 MiB</p>
           <p id="historyCapacityWarning" class="history-capacity-warning" role="status" aria-live="polite"
             aria-atomic="true" hidden></p>
+          <p id="historyBackupStatus" class="history-backup-status">最終バックアップ：未実施</p>
+          <p id="historyBackupNotice" class="history-capacity-warning level-warning" role="status" aria-live="polite"
+            aria-atomic="true" hidden></p>
           <p class="history-capacity-note">復元可能な全件バックアップの上限に対する目安です。端末の保存容量上限ではありません。</p>
+          <p id="historyAttachmentNotice" class="history-attachment-notice" hidden></p>
         </section>
         <div class="history-toolbar" aria-label="履歴の入出力">
           <button type="button" class="toolbar-btn" id="importMarkdownBtn">MDインポート</button>
@@ -191,12 +203,25 @@
 
       <section id="screen-info" class="screen" role="tabpanel" aria-labelledby="tab-info" hidden>
         <section class="card">
+          <h2 class="card-title">通信と個人情報の保護</h2>
+          <p>このアプリの通信は、管理者が公開したアプリ本体の更新を受け取る一方向だけです。入力した記録、設置場所や立会人などの個人情報、添付ファイルは、このブラウザの中（端末内）にだけ保存され、インターネットへ送信されません。サーバー、アカウント、アクセス解析は使用していません。</p>
+          <p>記録が端末の外へ出るのは、ご自身で「MD出力」「全件バックアップ」や添付ファイルの「保存」「共有」を行ったときだけです。取り出したファイルは適切に管理してください。</p>
+        </section>
+        <section class="card">
           <h2 class="card-title">CamSyncについて</h2>
           <p>防犯カメラの表示時刻と端末時刻との誤差を計算・記録するツールです。記録は端末内のIndexedDBに保存され、アプリ更新では削除されません。</p>
         </section>
         <section class="card">
           <h2 class="card-title">データ保持</h2>
           <p>PWAの通常更新はアプリ本体のキャッシュだけを交換します。Safariの「Webサイトデータを削除」や端末初期化では履歴も失われるため、重要な記録は全件バックアップしてください。</p>
+          <p class="info-paragraph">記録に添付した写真・PDFも端末内のIndexedDBにだけ保存され、外部へ送信されません。全件バックアップとMD出力には添付ファイルは含まれず、全件置換で復元すると添付はすべて削除されます。必要な添付は、記録の編集画面から1件ずつ保存または共有してください。</p>
+        </section>
+        <section class="card" id="storageCard">
+          <h2 class="card-title">保存領域</h2>
+          <p>永続化：<strong id="storagePersistState">確認中</strong></p>
+          <p id="storagePersistDetail" class="storage-detail"></p>
+          <p id="storageUsage" class="storage-detail"></p>
+          <p id="storageAttachmentUsage" class="storage-detail">添付ファイル：確認中</p>
         </section>
         <section class="card">
           <h2 class="card-title">注意事項</h2>
@@ -208,10 +233,10 @@
     <nav class="tab-bar" role="tablist" aria-label="画面切替">
       <button type="button" id="tab-calc" class="tab-item active" role="tab" aria-selected="true"
         aria-controls="screen-calc" tabindex="0" data-screen="calc">計算</button>
+      <button type="button" id="tab-history" class="tab-item" role="tab" aria-selected="false"
+        aria-controls="screen-history" tabindex="-1" data-screen="history">記録</button>
       <button type="button" id="tab-timecalc" class="tab-item" role="tab" aria-selected="false"
         aria-controls="screen-timecalc" tabindex="-1" data-screen="timecalc">時間電卓</button>
-      <button type="button" id="tab-history" class="tab-item" role="tab" aria-selected="false"
-        aria-controls="screen-history" tabindex="-1" data-screen="history">履歴</button>
       <button type="button" id="tab-info" class="tab-item" role="tab" aria-selected="false" aria-controls="screen-info"
         tabindex="-1" data-screen="info">情報</button>
     </nav>
@@ -230,7 +255,7 @@
         <input type="date" id="editViewDate">
       </div>
       <fieldset class="field-group extract-fieldset">
-        <legend>抽出期間</legend>
+        <legend>抽出期間（実時刻で入力）</legend>
         <div class="extract-row">
           <span class="range-label">開始</span>
           <label class="sr-only" for="editExtractDate">抽出開始日</label>
@@ -258,6 +283,21 @@
         <label for="editNotes">補足情報</label>
         <textarea id="editNotes" maxlength="4000"></textarea>
       </div>
+      <section class="attachment-section" id="attachmentSection" aria-labelledby="attachmentTitle">
+        <h3 class="attachment-title" id="attachmentTitle">添付ファイル</h3>
+        <p class="attachment-note">添付ファイルの追加・削除はその場で保存されます（下の「保存」ボタンは記録情報だけに使います）。添付は端末内にだけ保存され、全件バックアップとMD出力には含まれません。</p>
+        <p class="attachment-note">JPEG・PNG・WebP・HEIC/HEIF画像とPDF。1ファイル10MiBまで、1記録10件まで。</p>
+        <ul class="attachment-list" id="attachmentList" aria-label="添付ファイルの一覧"></ul>
+        <p class="attachment-status" id="attachmentStatus" role="status" aria-live="polite" hidden></p>
+        <figure class="attachment-preview" id="attachmentPreview" hidden>
+          <img id="attachmentPreviewImage" alt="">
+          <figcaption id="attachmentPreviewCaption"></figcaption>
+          <button type="button" class="secondary-btn" id="attachmentPreviewCloseBtn">プレビューを閉じる</button>
+        </figure>
+        <input type="file" id="attachmentFileInput"
+          accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf" multiple hidden>
+        <button type="button" class="toolbar-btn attachment-add-btn" id="addAttachmentBtn">写真・PDFを添付</button>
+      </section>
       <div class="edit-modal-actions">
         <button type="button" class="secondary-btn" id="editCancelBtn">キャンセル</button>
         <button type="button" class="save-btn" id="editSaveBtn">保存</button>

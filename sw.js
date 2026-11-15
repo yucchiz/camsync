@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'camsync-';
-const CACHE_NAME = 'camsync-v18';
+const CACHE_NAME = 'camsync-v19';
 const APP_SHELL = [
   './',
   './index.html',
@@ -12,6 +12,12 @@ const APP_SHELL = [
   './lib/storage.mjs',
   './lib/backup.mjs',
   './lib/viewport.mjs',
+  './lib/attachment.mjs',
+  './lib/draft.mjs',
+  './lib/safe-storage.mjs',
+  './lib/backup-status.mjs',
+  './lib/form-errors.mjs',
+  './lib/storage-info.mjs',
   './manifest.json',
   './icons/icon.svg',
   './icons/icon-192.png',
@@ -48,38 +54,34 @@ self.addEventListener('message', (event) => {
   event.waitUntil(self.skipWaiting());
 });
 
-async function fetchAndCache(request, cache) {
-  const response = await fetch(request);
-  if (response.ok) {
-    await cache.put(request, response.clone());
-  }
-  return response;
+// 起動URLが ./ でも ./index.html でも、クエリ付きでも、キャッシュ済みの index.html に対応づける。
+function isAppEntryUrl(url) {
+  const scopeUrl = new URL(self.registration.scope);
+  return url.origin === scopeUrl.origin &&
+    (url.pathname === scopeUrl.pathname || url.pathname === new URL(APP_ENTRY_URL).pathname);
 }
 
-// HTML/ナビゲーションは network-first。ネットワーク障害時だけ現行キャッシュへ戻す。
-async function networkFirst(request) {
+function isNavigationRequest(request) {
+  return request.mode === 'navigate' || request.destination === 'document';
+}
+
+// アプリシェルはinstall時に作ったこのバージョンのキャッシュだけから返す（cache-first）。
+// 稼働中のキャッシュはfetchで上書きしないため、「新しいHTML+古いJS」の混在は起きない。
+// キャッシュに無い要求はネットワークへ取りに行くだけで、キャッシュには書き足さない。
+async function respondFromAppShell(request) {
   const cache = await caches.open(CACHE_NAME);
+  const url = new URL(request.url);
+  const key = isAppEntryUrl(url) ? APP_ENTRY_URL : request;
+  const cached = await cache.match(key, { ignoreSearch: true });
+  if (cached) return cached;
 
   try {
-    return await fetchAndCache(request, cache);
+    return await fetch(request);
   } catch (networkError) {
-    const cached = await cache.match(request) || await cache.match(APP_ENTRY_URL);
-    if (cached) return cached;
+    const entry = isNavigationRequest(request) ? await cache.match(APP_ENTRY_URL) : undefined;
+    if (entry) return entry;
     throw networkError;
   }
-}
-
-// 静的アセットは stale-while-revalidate。キャッシュがあればオフラインでも即時に返す。
-async function staleWhileRevalidate(event) {
-  const cache = await caches.open(CACHE_NAME);
-  const cached = await cache.match(event.request);
-  const network = fetchAndCache(event.request, cache);
-
-  if (!cached) return network;
-
-  // キャッシュ済みなら通信失敗は想定内。更新処理をSWの寿命に紐付ける。
-  event.waitUntil(network.catch(() => undefined));
-  return cached;
 }
 
 function isAppRequest(request) {
@@ -92,12 +94,5 @@ function isAppRequest(request) {
 
 self.addEventListener('fetch', (event) => {
   if (!isAppRequest(event.request)) return;
-
-  const isNavigation =
-    event.request.mode === 'navigate' ||
-    event.request.destination === 'document';
-
-  event.respondWith(
-    isNavigation ? networkFirst(event.request) : staleWhileRevalidate(event)
-  );
+  event.respondWith(respondFromAppShell(event.request));
 });

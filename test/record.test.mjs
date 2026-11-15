@@ -121,3 +121,25 @@ test('validateRecord rejects non-string values for every string field', () => {
     assert.ok(result.errors.some((item) => item.code === 'invalid_field_type' && item.field === field), field);
   }
 });
+
+test('validateRecordのエラーメッセージは内部フィールド名でなく日本語ラベルを使う', () => {
+  const expected = {
+    refTime: '基準時刻', camTime: 'カメラ表示時刻', direction: '誤差の向き', displayVal: '誤差表示',
+    location: 'カメラ設置場所', viewDate: '閲覧日', extractDate: '抽出日',
+    extractStartTime: '抽出開始時刻', extractEndDate: '抽出終了日', extractEndTime: '抽出終了時刻',
+    witnessName: '立会人氏名', witnessAge: '立会人年齢', notes: '補足'
+  };
+  for (const [field, label] of Object.entries(expected)) {
+    const result = validateRecord(validRecord({ [field]: 1 }));
+    const item = result.errors.find((entry) => entry.code === 'invalid_field_type' && entry.field === field);
+    assert.equal(item.message, `${label}は文字列である必要があります`, field);
+  }
+  assert.equal(
+    validateRecord(validRecord({ location: 'a'.repeat(FIELD_LIMITS.location + 1) })).errors[0].message,
+    'カメラ設置場所は200文字以内で入力してください'
+  );
+  assert.equal(
+    validateRecord(validRecord({ notes: 'a'.repeat(FIELD_LIMITS.notes + 1) })).errors[0].message,
+    '補足は4000文字以内で入力してください'
+  );
+});
