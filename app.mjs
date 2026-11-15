@@ -634,7 +634,10 @@ function switchScreen(name, { focus = false } = {}) {
     if (selected && focus) tab.focus();
   });
   if (name === 'history') renderHistory();
-  if (name === 'info') refreshStorageCard();
+  if (name === 'info') {
+    refreshStorageCard();
+    renderDisplayDiagnostics();
+  }
   el('appBody').scrollTop = 0;
 }
 
@@ -747,6 +750,44 @@ async function requestPersistentStorage() {
   } catch (error) {
     console.warn('保存領域の永続化を要求できませんでした', error);
   }
+}
+
+function measureProbe(className, read) {
+  const probe = document.createElement('div');
+  probe.className = `viewport-probe ${className}`;
+  document.body.append(probe);
+  const value = read(probe);
+  probe.remove();
+  return value;
+}
+
+// 画面の位置ずれ（iOS のホーム画面アプリなど）の原因を調べるための実測値を表示する。
+function renderDisplayDiagnostics() {
+  const round = (value) => (Number.isFinite(value) ? Math.round(value * 10) / 10 : '-');
+  const unit = (name) => measureProbe(`unit-${name}`, (probe) => round(probe.getBoundingClientRect().height));
+  const insets = measureProbe('unit-inset', (probe) => {
+    const style = getComputedStyle(probe);
+    return `${style.paddingTop} / ${style.paddingBottom}`;
+  });
+  const viewport = window.visualViewport;
+  const appRect = el('appRoot').getBoundingClientRect();
+  const headerRect = document.querySelector('.app-header').getBoundingClientRect();
+  const tabRect = document.querySelector('.tab-bar').getBoundingClientRect();
+  const standalone = navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+  el('displayDiagnostics').textContent = [
+    `ver ${APP_VERSION} / standalone ${standalone}`,
+    `screen ${window.screen.width}x${window.screen.height} dpr ${window.devicePixelRatio}`,
+    `inner ${window.innerWidth}x${window.innerHeight}`,
+    `client ${document.documentElement.clientWidth}x${document.documentElement.clientHeight}`,
+    `vv h ${round(viewport?.height)} top ${round(viewport?.offsetTop)} page ${round(viewport?.pageTop)} scale ${round(viewport?.scale)}`,
+    `vh ${unit('vh')} dvh ${unit('dvh')} svh ${unit('svh')} lvh ${unit('lvh')}`,
+    `safe top/bottom ${insets}`,
+    `app-height ${document.documentElement.style.getPropertyValue('--app-height') || '(css)'}`,
+    `app ${round(appRect.top)}..${round(appRect.bottom)} header ${round(headerRect.top)}..${round(headerRect.bottom)}`,
+    `tab ${round(tabRect.top)}..${round(tabRect.bottom)}`,
+    `scroll html ${round(document.documentElement.scrollTop)} body ${round(document.body.scrollTop)} win ${round(window.scrollY)}`,
+    navigator.userAgent,
+  ].join('\n');
 }
 
 async function refreshStorageCard() {
