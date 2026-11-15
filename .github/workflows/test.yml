@@ -1,0 +1,26 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 自動テスト
+        run: node --test test/*.test.mjs
+      - name: 構文チェック
+        run: |
+          node --check app.mjs
+          node --check sw.js
+          for f in lib/*.mjs; do node --check "$f"; done
+      - name: manifest の検証
+        run: python3 -m json.tool manifest.json >/dev/null
