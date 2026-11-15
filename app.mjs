@@ -60,9 +60,11 @@ import {
   saveBackupMeta,
 } from './lib/backup-status.mjs';
 import { groupFormErrors } from './lib/form-errors.mjs';
+import { normalizeReleaseNotes } from './lib/release-notes.mjs';
+import { readItem, writeItem } from './lib/safe-storage.mjs';
 import { describePersistence, formatStorageUsage } from './lib/storage-info.mjs';
 
-const APP_VERSION = '2.9.0';
+const APP_VERSION = '2.9.1';
 const DIRECTION_LABELS = {
   ahead: 'カメラ時刻が進んでいます',
   behind: 'カメラ時刻が遅れています',
@@ -118,6 +120,7 @@ const UNDO_TOAST_MS = 6000;
 const TOAST_MS = 3200;
 const EXTRACT_FIELDS = ['extractDate', 'extractStartTime', 'extractEndDate', 'extractEndTime'];
 const STALE_RESULT_MESSAGE = '再計算が必要です';
+const LAST_SEEN_VERSION_KEY = 'camsync.lastSeenVersion.v1';
 const ATTACHMENT_TYPE_LABELS = Object.freeze({
   'image/jpeg': 'JPEG画像',
   'image/png': 'PNG画像',
@@ -638,10 +641,7 @@ function switchScreen(name, { focus = false } = {}) {
     if (selected && focus) tab.focus();
   });
   if (name === 'history') renderHistory();
-  if (name === 'info') {
-    refreshStorageCard();
-    renderDisplayDiagnostics();
-  }
+  if (name === 'info') refreshStorageCard();
   el('appBody').scrollTop = 0;
 }
 
@@ -754,44 +754,6 @@ async function requestPersistentStorage() {
   } catch (error) {
     console.warn('保存領域の永続化を要求できませんでした', error);
   }
-}
-
-function measureProbe(className, read) {
-  const probe = document.createElement('div');
-  probe.className = `viewport-probe ${className}`;
-  document.body.append(probe);
-  const value = read(probe);
-  probe.remove();
-  return value;
-}
-
-// 画面の位置ずれ（iOS のホーム画面アプリなど）の原因を調べるための実測値を表示する。
-function renderDisplayDiagnostics() {
-  const round = (value) => (Number.isFinite(value) ? Math.round(value * 10) / 10 : '-');
-  const unit = (name) => measureProbe(`unit-${name}`, (probe) => round(probe.getBoundingClientRect().height));
-  const insets = measureProbe('unit-inset', (probe) => {
-    const style = getComputedStyle(probe);
-    return `${style.paddingTop} / ${style.paddingBottom}`;
-  });
-  const viewport = window.visualViewport;
-  const appRect = el('appRoot').getBoundingClientRect();
-  const headerRect = document.querySelector('.app-header').getBoundingClientRect();
-  const tabRect = document.querySelector('.tab-bar').getBoundingClientRect();
-  const standalone = navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
-  el('displayDiagnostics').textContent = [
-    `ver ${APP_VERSION} / standalone ${standalone}`,
-    `screen ${window.screen.width}x${window.screen.height} dpr ${window.devicePixelRatio}`,
-    `inner ${window.innerWidth}x${window.innerHeight}`,
-    `client ${document.documentElement.clientWidth}x${document.documentElement.clientHeight}`,
-    `vv h ${round(viewport?.height)} top ${round(viewport?.offsetTop)} page ${round(viewport?.pageTop)} scale ${round(viewport?.scale)}`,
-    `vh ${unit('vh')} dvh ${unit('dvh')} svh ${unit('svh')} lvh ${unit('lvh')}`,
-    `safe top/bottom ${insets}`,
-    `app-height ${document.documentElement.style.getPropertyValue('--app-height') || '(css)'}`,
-    `app ${round(appRect.top)}..${round(appRect.bottom)} header ${round(headerRect.top)}..${round(headerRect.bottom)}`,
-    `tab ${round(tabRect.top)}..${round(tabRect.bottom)}`,
-    `scroll html ${round(document.documentElement.scrollTop)} body ${round(document.body.scrollTop)} win ${round(window.scrollY)}`,
-    navigator.userAgent,
-  ].join('\n');
 }
 
 async function refreshStorageCard() {
@@ -1661,9 +1623,59 @@ function bindViewportRecovery() {
   scheduleViewportAnchor();
 }
 
+// Service Worker に、その版の更新内容を問い合わせる。応答がなければ空の一覧として扱う。
+function requestReleaseNotes(worker) {
+  return new Promise((resolve) => {
+    if (!worker || typeof MessageChannel !== 'function') {
+      resolve([]);
+      return;
+    }
+    const channel = new MessageChannel();
+    const timer = setTimeout(() => resolve([]), 2000);
+    channel.port1.onmessage = (event) => {
+      clearTimeout(timer);
+      resolve(normalizeReleaseNotes(event.data?.notes));
+    };
+    try {
+      worker.postMessage({ type: 'GET_RELEASE_NOTES' }, [channel.port2]);
+    } catch (error) {
+      clearTimeout(timer);
+      console.warn('更新内容を取得できませんでした', error);
+      resolve([]);
+    }
+  });
+}
+
+function renderReleaseNotes(list, notes) {
+  list.replaceChildren(...notes.map((note) => {
+    const item = document.createElement('li');
+    item.textContent = note;
+    return item;
+  }));
+  list.hidden = notes.length === 0;
+}
+
 function showUpdate(worker) {
   waitingWorker = worker;
   el('updateBanner').hidden = false;
+  // 更新内容は、待機中の新しい Service Worker が持っている。
+  requestReleaseNotes(worker).then((notes) => {
+    if (waitingWorker === worker) renderReleaseNotes(el('updateNotes'), notes);
+  });
+}
+
+// 更新直後の最初の起動で、何が変わったかを一度だけ知らせる。
+async function showUpdatedNoticeOnce() {
+  const previous = readItem(localStore, LAST_SEEN_VERSION_KEY);
+  writeItem(localStore, LAST_SEEN_VERSION_KEY, APP_VERSION);
+  const controller = navigator.serviceWorker?.controller;
+  // 初回インストール（制御中の Service Worker がまだ無い）では出さない。
+  if (previous === APP_VERSION || !controller) return;
+  const notes = await requestReleaseNotes(controller);
+  if (notes.length === 0) return;
+  el('updatedNoticeTitle').textContent = `v${APP_VERSION.replace(/\.0$/, '')} に更新しました。`;
+  renderReleaseNotes(el('updatedNotes'), notes);
+  el('updatedNotice').hidden = false;
 }
 
 function installServiceWorker() {
@@ -1751,6 +1763,7 @@ function bindEvents() {
 
   el('updateLaterBtn').addEventListener('click', () => { el('updateBanner').hidden = true; });
   el('updateNowBtn').addEventListener('click', applyUpdate);
+  el('updatedNoticeCloseBtn').addEventListener('click', () => { el('updatedNotice').hidden = true; });
   bindExtractAssist('create');
   bindExtractAssist('edit');
   bindAutoAdvance(CAMERA_TIME_INPUT_IDS, [2, 2, 2]);
@@ -1770,6 +1783,7 @@ setTimeOperator('add');
 updateClock();
 setInterval(updateClock, 250);
 installServiceWorker();
+showUpdatedNoticeOnce();
 // 既に記録がある状態での起動時にも、永続化されていなければ要求する。
 getAllRecords()
   .then((records) => { if (records.length > 0) requestPersistentStorage(); })

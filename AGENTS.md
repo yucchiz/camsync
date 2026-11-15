@@ -42,6 +42,7 @@ CamSync は、防犯カメラの表示時刻と端末時計を比較し、誤差
 - `lib/backup-status.mjs`: 最終バックアップの日時と件数（`createBackupMeta`、`saveBackupMeta`、`loadBackupMeta`）と表示文（`describeBackupStatus`）。`localStorage` の `camsync.lastBackup.v1` に保存する。
 - `lib/form-errors.mjs`: `validateRecord` のエラーを入力欄単位に振り分ける `groupFormErrors`。
 - `lib/storage-info.mjs`: 永続化の状態と使用量の表示文（`describePersistence`、`formatStorageUsage`）。
+- `lib/release-notes.mjs`: Service Worker から受け取った更新内容を表示用に整える `normalizeReleaseNotes`（5 件、各 80 文字まで）。
 - `lib/safe-storage.mjs`: `localStorage` を例外なしで扱う `readItem`、`writeItem`、`removeItem`。
 - `app.mjs`: フォーム要素 ID の対応表 `FORM_FIELD_IDS`（作成・編集）、ダイアログ開閉の `openDialog`／`closeDialog`／`bindDialogKeys`、誤差計算フロー（`lockClock`、`calculateCameraDrift`、`saveCurrentRecord`）、時間電卓（`runTimeCalculator`）、履歴（`renderHistory`、編集モーダル、個別削除の取り消し `removeRecord`／`undoRemoveRecord` と `recordDeleter`）、添付（`renderAttachmentList`、`attachSelectedFiles`、`previewAttachment`／`closeAttachmentPreview`、`saveAttachmentToDevice`、`shareAttachment`、`removeAttachment`）、入出力（`exportMarkdown`、`importMarkdownFile`、`backupAllRecords`、`prepareRestore`、`restoreMerge`、`restoreReplace`）。
 
@@ -72,7 +73,7 @@ python3 -m json.tool manifest.json >/dev/null
 git diff --check
 ```
 
-キャッシュ対象アセットまたは `sw.js` を変更したあとは、`sw.js` の `CACHE_NAME`（`camsync-vN`）を一度だけ上げてください。ファイルを追加・削除した場合は `APP_SHELL` も更新します（`test/sw.test.mjs` が `app.mjs` からの import の漏れを検査します）。更新試験は旧版を登録した同一オリジンから通常の更新操作で行い、IndexedDB の保持を確認するためサイトデータは消去しないでください。
+キャッシュ対象アセットまたは `sw.js` を変更したあとは、`sw.js` の `CACHE_NAME`（`camsync-vN`）を一度だけ上げてください。利用者に伝えたい変更があるときは、同じファイルの `RELEASE_NOTES`（利用者向けの短い日本語、5 件まで）も書き換えます。更新案内は待機中の新しい Service Worker に、更新直後のお知らせは制御中の Service Worker に `GET_RELEASE_NOTES` で問い合わせて表示します。ファイルを追加・削除した場合は `APP_SHELL` も更新します（`test/sw.test.mjs` が `app.mjs` からの import の漏れを検査します）。更新試験は旧版を登録した同一オリジンから通常の更新操作で行い、IndexedDB の保持を確認するためサイトデータは消去しないでください。
 
 バージョンを上げる場合は、`app.mjs` の `APP_VERSION`、`index.html` の初期表示（`id="appVersion"`）、`README.md` の「このソースのバージョン」を揃えます。`test/ui-shell.test.mjs` がこの一致を検査します。
 

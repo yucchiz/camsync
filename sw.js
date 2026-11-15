@@ -1,5 +1,12 @@
 const CACHE_PREFIX = 'camsync-';
-const CACHE_NAME = 'camsync-v22';
+const CACHE_NAME = 'camsync-v23';
+// 更新案内と更新直後のお知らせに表示する、この版の主な更新内容（利用者向けに短く、5件まで）。
+const RELEASE_NOTES = [
+  '記録に写真・PDFを添付できるようになりました',
+  '入力途中の内容を自動で下書き保存します',
+  '削除した記録を直後なら元に戻せます',
+  '明るい表示に対応し、タブの並びを変更しました',
+];
 const APP_SHELL = [
   './',
   './index.html',
@@ -17,6 +24,7 @@ const APP_SHELL = [
   './lib/safe-storage.mjs',
   './lib/backup-status.mjs',
   './lib/form-errors.mjs',
+  './lib/release-notes.mjs',
   './lib/storage-info.mjs',
   './manifest.json',
   './icons/icon.svg',
@@ -50,6 +58,11 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('message', (event) => {
+  // 更新案内に出す更新内容を、問い合わせてきた画面へ返す。
+  if (event.data?.type === 'GET_RELEASE_NOTES') {
+    event.ports?.[0]?.postMessage({ notes: RELEASE_NOTES });
+    return;
+  }
   if (event.data?.type !== 'SKIP_WAITING') return;
   event.waitUntil(self.skipWaiting());
 });

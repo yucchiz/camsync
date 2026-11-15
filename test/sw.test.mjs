@@ -57,6 +57,9 @@ function loadServiceWorker({ network }) {
       listeners.install({ waitUntil: (promise) => { work = promise; } });
       await work;
     },
+    message(data, ports = []) {
+      listeners.message({ data, ports, waitUntil: () => {} });
+    },
     async request(url, init = {}) {
       let response;
       let handled = false;
@@ -68,6 +71,23 @@ function loadServiceWorker({ network }) {
     }
   };
 }
+
+test('更新内容の問い合わせに、短い文字列の一覧を返す', async () => {
+  const worker = loadServiceWorker({ network: async () => ({}) });
+  const replies = [];
+  worker.message({ type: 'GET_RELEASE_NOTES' }, [{ postMessage: (reply) => replies.push(reply) }]);
+
+  assert.equal(replies.length, 1);
+  // vm の別コンテキストで作られた配列なので、要素を取り出して比べる。
+  const notes = [...replies[0].notes];
+  assert.ok(notes.length >= 1 && notes.length <= 5);
+  for (const note of notes) {
+    assert.equal(typeof note, 'string');
+    assert.ok(note.length > 0 && note.length <= 80, note);
+  }
+  // 返信先が無い問い合わせでも落ちない。
+  worker.message({ type: 'GET_RELEASE_NOTES' });
+});
 
 test('ナビゲーションは ./ ・index.html・クエリ付きのどれでもキャッシュ済みindex.htmlを返す', async () => {
   const worker = loadServiceWorker({ network: async () => { throw new Error('offline'); } });

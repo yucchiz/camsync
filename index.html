@@ -22,14 +22,23 @@
   <div class="app" id="appRoot">
     <header class="app-header">
       <div class="app-title">Cam<span>Sync</span></div>
-      <div class="app-version" id="appVersion">v2.9</div>
+      <div class="app-version" id="appVersion">v2.9.1</div>
     </header>
 
     <div class="update-banner" id="updateBanner" role="status" hidden>
       <span>新しいバージョンを利用できます。</span>
+      <ul class="update-notes" id="updateNotes" hidden></ul>
       <div class="update-actions">
         <button type="button" class="secondary-btn" id="updateLaterBtn">後で</button>
         <button type="button" class="primary-small-btn" id="updateNowBtn">更新する</button>
+      </div>
+    </div>
+
+    <div class="update-banner" id="updatedNotice" role="status" hidden>
+      <span id="updatedNoticeTitle"></span>
+      <ul class="update-notes" id="updatedNotes" hidden></ul>
+      <div class="update-actions">
+        <button type="button" class="secondary-btn" id="updatedNoticeCloseBtn">閉じる</button>
       </div>
     </div>
 
@@ -222,11 +231,6 @@
           <p id="storagePersistDetail" class="storage-detail"></p>
           <p id="storageUsage" class="storage-detail"></p>
           <p id="storageAttachmentUsage" class="storage-detail">添付ファイル：確認中</p>
-        </section>
-        <section class="card">
-          <h2 class="card-title">表示の診断情報</h2>
-          <p class="storage-detail">画面の位置がずれて見える場合に、原因を調べるための数値です。端末の外へは送信されません。</p>
-          <p id="displayDiagnostics" class="display-diagnostics"></p>
         </section>
         <section class="card">
           <h2 class="card-title">注意事項</h2>
